@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Plataforma Predictiva — Gestión de Inventarios</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0E1A17; --panel:#132621; --panel-2:#0F211C; --line:#22423A;
+    --text:#EAF4F0; --muted:#8FB0A6; --good:#5FD3A3; --bad:#F2A65A;
+    --accent:#39E6A8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif; padding-bottom:60px;
+  }
+  header{
+    padding:40px 6vw 24px; border-bottom:1px solid var(--line);
+  }
+  .eyebrow{color:var(--muted); font-size:.8rem; letter-spacing:.02em;}
+  h1{
+    font-family:'Space Grotesk',sans-serif; font-weight:700;
+    font-size:clamp(1.6rem,3vw,2.4rem); margin:.3rem 0 .4rem; line-height:1.15;
+  }
+  .sub{color:var(--muted); font-size:.95rem; max-width:60ch;}
+  main{padding:32px 6vw; display:grid; gap:28px;}
+  .grid-indicadores{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px;
+  }
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px;
+  }
+  .card .label{color:var(--muted); font-size:.82rem; margin-bottom:10px;}
+  .card .valores{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
+  .card .o2{font-family:'Space Grotesk',sans-serif; font-size:1.9rem; font-weight:700;}
+  .card .o1{color:var(--muted); font-size:.95rem; text-decoration:line-through;}
+  .delta{font-size:.82rem; font-weight:600; margin-top:8px;}
+  .delta.up{color:var(--good);} .delta.down{color:var(--bad);}
+  .panel-grande{
+    background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:24px;
+  }
+  .panel-grande h2{font-family:'Space Grotesk',sans-serif; font-size:1.1rem; margin:0 0 4px;}
+  .panel-grande p.desc{color:var(--muted); font-size:.85rem; margin:0 0 18px;}
+  .meta-row{display:flex; gap:32px; flex-wrap:wrap; margin-top:18px; font-size:.85rem; color:var(--muted);}
+  .meta-row b{color:var(--text); display:block; font-family:'Space Grotesk',sans-serif; font-size:1.1rem;}
+  footer{padding:24px 6vw; color:var(--muted); font-size:.8rem; border-top:1px solid var(--line);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="eyebrow">Proyecto de Tesis — Ingeniería de Sistemas</div>
+  <h1>Plataforma web predictiva para la optimización de la gestión de inventarios</h1>
+  <p class="sub">Modelo híbrido ARIMA + LSTM entrenado sobre datos reales (SupplyGraph, Wasi et al., 2024) — productos de Categoría A. Comparación entre el esquema de pronóstico actual (O1) y la plataforma propuesta (O2).</p>
+</header>
+
+<main>
+
+  <section class="grid-indicadores">
+    {% set nombres = {
+      'MAE': ['Error absoluto medio (MAE)', 'unidades', False],
+      'MAPE_pct': ['Error porcentual (MAPE)', '%', False],
+      'tasa_quiebre_pct': ['Tasa de quiebre de stock', '%', False],
+      'ventas_perdidas_pct': ['Ventas perdidas', '%', False],
+      'fill_rate_pct': ['Nivel de servicio (Fill Rate)', '%', True],
+      'otd_pct': ['Cumplimiento de despachos (OTD)', '%', True]
+    } %}
+    {% for clave, info in nombres.items() %}
+      {% set o1 = datos.O1_pretest[clave] %}
+      {% set o2 = datos.O2_postest[clave] %}
+      {% set mejora = (o2 > o1) if info[2] else (o2 < o1) %}
+      <div class="card">
+        <div class="label">{{ info[0] }}</div>
+        <div class="valores">
+          <span class="o2">{{ o2 }}{{ info[1] }}</span>
+          <span class="o1">{{ o1 }}{{ info[1] }}</span>
+        </div>
+        <div class="delta {{ 'up' if mejora else 'down' }}">
+          {{ '▲ mejora' if mejora else '▼ revisar' }} frente al esquema actual
+        </div>
+      </div>
+    {% endfor %}
+  </section>
+
+  <section class="panel-grande">
+    <h2>Demanda real vs. pronóstico — periodo de prueba</h2>
+    <p class="desc">{{ datos.periodo_test }} · Categoría A (8 SKUs) · Orden ARIMA seleccionado por AIC: {{ datos.orden_arima }}</p>
+    <canvas id="grafico" height="90"></canvas>
+    <div class="meta-row">
+      <div><b>{{ datos.O2_postest.tiempo_entrenamiento_seg }}s</b>Tiempo de entrenamiento</div>
+      <div><b>{{ datos.O2_postest.tiempo_respuesta_seg }}s</b>Tiempo de respuesta / predicción</div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  Fuente de datos: SupplyGraph (Wasi, Islam &amp; Akib, 2024) — dataset público, uso académico. Elaboración propia.
+</footer>
+
+<script>
+  const datos = {{ datos | tojson }};
+  new Chart(document.getElementById('grafico'), {
+    type: 'line',
+    data: {
+      labels: datos.fechas,
+      datasets: [
+        { label: 'Demanda real', data: datos.serie_actual, borderColor: '#EAF4F0', borderWidth: 2, pointRadius: 0, tension: 0.15 },
+        { label: 'Pronóstico ingenuo (O1)', data: datos.serie_pred_naive, borderColor: '#F2A65A', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, tension: 0.15 },
+        { label: 'Modelo híbrido (O2)', data: datos.serie_pred_hibrido, borderColor: '#39E6A8', borderWidth: 2, pointRadius: 0, tension: 0.15 },
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { color: '#8FB0A6', font: { family: 'Inter' } } } },
+      scales: {
+        x: { ticks: { color: '#8FB0A6', maxTicksLimit: 8 }, grid: { color: '#22423A' } },
+        y: { ticks: { color: '#8FB0A6' }, grid: { color: '#22423A' } }
+      }
+    }
+  });
+</script>
+
+</body>
+</html>
