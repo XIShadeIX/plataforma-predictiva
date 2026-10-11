@@ -1,130 +1,117 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Plataforma Predictiva — Gestión de Inventarios</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0E1A17; --panel:#132621; --panel-2:#0F211C; --line:#22423A;
-    --text:#EAF4F0; --muted:#8FB0A6; --good:#5FD3A3; --bad:#F2A65A;
-    --accent:#39E6A8;
-  }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; background:var(--bg); color:var(--text);
-    font-family:'Inter',sans-serif; padding-bottom:60px;
-  }
-  header{
-    padding:40px 6vw 24px; border-bottom:1px solid var(--line);
-  }
-  .eyebrow{color:var(--muted); font-size:.8rem; letter-spacing:.02em;}
-  h1{
-    font-family:'Space Grotesk',sans-serif; font-weight:700;
-    font-size:clamp(1.6rem,3vw,2.4rem); margin:.3rem 0 .4rem; line-height:1.15;
-  }
-  .sub{color:var(--muted); font-size:.95rem; max-width:60ch;}
-  main{padding:32px 6vw; display:grid; gap:28px;}
-  .grid-indicadores{
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:16px;
-  }
-  .card{
-    background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:20px;
-  }
-  .card .label{color:var(--muted); font-size:.82rem; margin-bottom:10px;}
-  .card .valores{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;}
-  .card .o2{font-family:'Space Grotesk',sans-serif; font-size:1.9rem; font-weight:700;}
-  .card .o1{color:var(--muted); font-size:.95rem; text-decoration:line-through;}
-  .delta{font-size:.82rem; font-weight:600; margin-top:8px;}
-  .delta.up{color:var(--good);} .delta.down{color:var(--bad);}
-  .panel-grande{
-    background:var(--panel-2); border:1px solid var(--line); border-radius:10px; padding:24px;
-  }
-  .panel-grande h2{font-family:'Space Grotesk',sans-serif; font-size:1.1rem; margin:0 0 4px;}
-  .panel-grande p.desc{color:var(--muted); font-size:.85rem; margin:0 0 18px;}
-  .meta-row{display:flex; gap:32px; flex-wrap:wrap; margin-top:18px; font-size:.85rem; color:var(--muted);}
-  .meta-row b{color:var(--text); display:block; font-family:'Space Grotesk',sans-serif; font-size:1.1rem;}
-  footer{padding:24px 6vw; color:var(--muted); font-size:.8rem; border-top:1px solid var(--line);}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Predictiva de Gestión de Inventarios</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
+<body class="bg-gray-900 text-gray-100 font-sans antialiased min-h-screen p-6">
 
-<header>
-  <div class="eyebrow">Proyecto de Tesis — Ingeniería de Sistemas</div>
-  <h1>Plataforma web predictiva para la optimización de la gestión de inventarios</h1>
-  <p class="sub">Modelo híbrido ARIMA + LSTM entrenado sobre datos reales (SupplyGraph, Wasi et al., 2024) — productos de Categoría A. Comparación entre el esquema de pronóstico actual (O1) y la plataforma propuesta (O2).</p>
-</header>
+    <div class="max-w-7xl mx-auto space-y-8">
+        <header class="border-b border-gray-800 pb-4 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-white tracking-wide">Plataforma Web de Gestión de Inventarios</h1>
+                <p class="text-sm text-gray-400">Sistema Predictivo Multi-SKU (Modelo Híbrido ARIMA-LSTM) — Categoría A</p>
+            </div>
+            <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-semibold">● Servidor Local</span>
+        </header>
 
-<main>
-
-  <section class="grid-indicadores">
-    {% set nombres = {
-      'MAE': ['Error absoluto medio (MAE)', 'unidades', False],
-      'MAPE_pct': ['Error porcentual (MAPE)', '%', False],
-      'tasa_quiebre_pct': ['Tasa de quiebre de stock', '%', False],
-      'ventas_perdidas_pct': ['Ventas perdidas', '%', False],
-      'fill_rate_pct': ['Nivel de servicio (Fill Rate)', '%', True],
-      'otd_pct': ['Cumplimiento de despachos (OTD)', '%', True]
-    } %}
-    {% for clave, info in nombres.items() %}
-      {% set o1 = datos.O1_pretest[clave] %}
-      {% set o2 = datos.O2_postest[clave] %}
-      {% set mejora = (o2 > o1) if info[2] else (o2 < o1) %}
-      <div class="card">
-        <div class="label">{{ info[0] }}</div>
-        <div class="valores">
-          <span class="o2">{{ o2 }}{{ info[1] }}</span>
-          <span class="o1">{{ o1 }}{{ info[1] }}</span>
+        <div id="banner-alerta" class="p-4 rounded-xl border flex items-center justify-between transition-all bg-amber-500/10 border-amber-500/30 text-amber-300">
+            <div class="flex items-center space-x-3">
+                <span class="text-2xl">⚠️</span>
+                <div>
+                    <h3 class="font-bold text-base" id="banner-titulo">Cargando estado de existencias...</h3>
+                    <p class="text-xs text-amber-200/80" id="banner-subtitulo">Analizando patrones de demanda por SKU</p>
+                </div>
+            </div>
         </div>
-        <div class="delta {{ 'up' if mejora else 'down' }}">
-          {{ '▲ mejora' if mejora else '▼ revisar' }} frente al esquema actual
-        </div>
-      </div>
-    {% endfor %}
-  </section>
 
-  <section class="panel-grande">
-    <h2>Demanda real vs. pronóstico — periodo de prueba</h2>
-    <p class="desc">{{ datos.periodo_test }} · Categoría A (8 SKUs) · Orden ARIMA seleccionado por AIC: {{ datos.orden_arima }}</p>
-    <canvas id="grafico" height="90"></canvas>
-    <div class="meta-row">
-      <div><b>{{ datos.O2_postest.tiempo_entrenamiento_seg }}s</b>Tiempo de entrenamiento</div>
-      <div><b>{{ datos.O2_postest.tiempo_respuesta_seg }}s</b>Tiempo de respuesta / predicción</div>
+        <section class="space-y-4">
+            <div class="flex justify-between items-center">
+                <h2 class="text-lg font-semibold text-white">Planificación de Reabastecimiento por Producto</h2>
+                <span class="text-xs text-gray-400">Ordenado por nivel de riesgo logístico</span>
+            </div>
+            <div id="grid-skus" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"></div>
+        </section>
+
+        <section class="border-t border-gray-800 pt-8 space-y-6">
+            <h2 class="text-lg font-semibold text-white">📊 Evidencia de Desempeño Algorítmico (O1 vs O2)</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4" id="grid-metricas-globales"></div>
+            <div class="bg-gray-800/50 border border-gray-800 p-5 rounded-xl space-y-3">
+                <h3 class="text-sm font-semibold text-gray-300">Curva de Demanda Real vs. Pronóstico</h3>
+                <div class="h-64"><canvas id="chartDemanda"></canvas></div>
+            </div>
+        </section>
     </div>
-  </section>
 
-</main>
+    <script>
+        fetch('/api/data')
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('banner-titulo').innerText = data.banner.mensaje;
+                document.getElementById('banner-subtitulo').innerText = `Monitoreo continuo en ${data.banner.total_skus} SKUs estratégicos.`;
+                renderizarSKUs(data.recomendaciones_skus);
+                renderizarMetricasGlobales(data.metricas_globales);
+                renderizarGrafico(data.grafico);
+            });
 
-<footer>
-  Fuente de datos: SupplyGraph (Wasi, Islam &amp; Akib, 2024) — dataset público, uso académico. Elaboración propia.
-</footer>
+        function renderizarSKUs(skus) {
+            const container = document.getElementById('grid-skus');
+            container.innerHTML = skus.map(item => {
+                const badgeClass = item.nivel_riesgo === 'Alto' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                   item.nivel_riesgo === 'Medio' ? 'bg-amber-500/20 text-amber-400 border-amber-500/30' :
+                                   'bg-emerald-500/20 text-emerald-400 border-emerald-500/30';
+                return `
+                    <div class="bg-gray-800/60 border border-gray-700/50 p-4 rounded-xl space-y-3">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <span class="text-xs text-gray-400 font-mono">SKU</span>
+                                <h3 class="font-bold text-white text-base">${item.sku}</h3>
+                            </div>
+                            <span class="px-2 py-0.5 rounded text-xs font-semibold border ${badgeClass}">Riesgo ${item.nivel_riesgo}</span>
+                        </div>
+                        <div class="border-t border-gray-700/50 pt-2 space-y-1.5">
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Pronóstico Próx. Semana:</span><span class="font-semibold text-gray-200">${item.pronostico_semanal} unids.</span></div>
+                            <div class="flex justify-between text-xs bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20"><span class="text-emerald-300 font-medium">Pedido Sugerido:</span><span class="font-bold text-emerald-400">${item.cobertura_recomendada} unids.</span></div>
+                            <div class="flex justify-between text-xs text-gray-400"><span>Tasa Quiebre:</span><span class="text-amber-400">${item.tasa_quiebre_o2}%</span></div>
+                        </div>
+                    </div>`;
+            }).join('');
+        }
 
-<script>
-  const datos = {{ datos | tojson }};
-  new Chart(document.getElementById('grafico'), {
-    type: 'line',
-    data: {
-      labels: datos.fechas,
-      datasets: [
-        { label: 'Demanda real', data: datos.serie_actual, borderColor: '#EAF4F0', borderWidth: 2, pointRadius: 0, tension: 0.15 },
-        { label: 'Pronóstico ingenuo (O1)', data: datos.serie_pred_naive, borderColor: '#F2A65A', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, tension: 0.15 },
-        { label: 'Modelo híbrido (O2)', data: datos.serie_pred_hibrido, borderColor: '#39E6A8', borderWidth: 2, pointRadius: 0, tension: 0.15 },
-      ]
-    },
-    options: {
-      responsive: true,
-      interaction: { mode: 'index', intersect: false },
-      plugins: { legend: { labels: { color: '#8FB0A6', font: { family: 'Inter' } } } },
-      scales: {
-        x: { ticks: { color: '#8FB0A6', maxTicksLimit: 8 }, grid: { color: '#22423A' } },
-        y: { ticks: { color: '#8FB0A6' }, grid: { color: '#22423A' } }
-      }
-    }
-  });
-</script>
+        function renderizarMetricasGlobales(m) {
+            const container = document.getElementById('grid-metricas-globales');
+            const items = [
+                { label: 'MAPE (Error)', o1: `${m.mape.o1}%`, o2: `${m.mape.o2}%` },
+                { label: 'Tasa Quiebre', o1: `${m.quiebre.o1}%`, o2: `${m.quiebre.o2}%` },
+                { label: 'Ventas Perdidas', o1: `${m.ventas_perdidas.o1}%`, o2: `${m.ventas_perdidas.o2}%` },
+                { label: 'Fill Rate', o1: `${m.fill_rate.o1}%`, o2: `${m.fill_rate.o2}%` },
+                { label: 'OTD (Despachos)', o1: `${m.otd.o1}%`, o2: `${m.otd.o2}%` },
+                { label: 'T. Respuesta', o1: '-', o2: `${m.tiempo_respuesta}s` }
+            ];
+            container.innerHTML = items.map(i => `
+                <div class="bg-gray-800/40 border border-gray-800 p-3 rounded-lg">
+                    <span class="text-xs text-gray-400 block">${i.label}</span>
+                    <div class="flex items-baseline space-x-2 mt-1"><span class="text-lg font-bold text-white">${i.o2}</span><span class="text-xs text-gray-500 line-through">${i.o1}</span></div>
+                </div>`).join('');
+        }
 
+        function renderizarGrafico(g) {
+            new Chart(document.getElementById('chartDemanda').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: g.fechas,
+                    datasets: [
+                        { label: 'Demanda Real', data: g.demanda_real, borderColor: '#38bdf8', borderWidth: 2, fill: false },
+                        { label: 'Modelo Híbrido (O2)', data: g.pronostico_o2, borderColor: '#34d399', borderWidth: 2, fill: false },
+                        { label: 'Esquema Actual (O1)', data: g.pronostico_o1, borderColor: '#f59e0b', borderDash: [4, 4], fill: false }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+    </script>
 </body>
 </html>
