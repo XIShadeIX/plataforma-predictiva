@@ -1,35 +1,24 @@
-"""
-app.py
-Plataforma web predictiva - Variable Independiente del proyecto de tesis.
-Sirve un dashboard con los indicadores O1 (pretest) vs O2 (postest) y la
-serie de pronostico del modelo hibrido ARIMA-LSTM.
-
-Ejecutar:
-    python entrenar_y_exportar.py   # una sola vez, genera resultados.json
-    python app.py                   # levanta el servidor en localhost:5000
-"""
+import os
 import json
-from flask import Flask, render_template
+from flask import Flask, render_template, jsonify
 
 app = Flask(__name__)
 
+@app.route('/')
+def index():
+    # Aseguramos que apunte a dashboard.html que es el archivo que tienes en la carpeta templates
+    return render_template('dashboard.html')
 
-def cargar_resultados():
-    with open("resultados.json", "r", encoding="utf-8") as f:
-        return json.load(f)
+@app.route('/api/data')
+def get_data():
+    # Lee los datos que ya calculaste localmente con tu script de 8 SKUs
+    try:
+        with open('resultados.json', 'r') as f:
+            data = json.load(f)
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-
-@app.route("/")
-def dashboard():
-    datos = cargar_resultados()
-    return render_template("dashboard.html", datos=datos)
-
-
-@app.route("/api/resultados")
-def api_resultados():
-    """Endpoint JSON, por si se quiere consumir desde otro frontend."""
-    return cargar_resultados()
-
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
