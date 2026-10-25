@@ -71,7 +71,7 @@
                 <!-- Módulo 2 y 3: Simulación Reactiva y Órdenes -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                     
-                    <!-- Simulador What-If Reactivo con Tarjetas Informativas Integradas -->
+                    <!-- Simulador What-If Reactivo -->
                     <div class="bg-gray-900/60 border border-gray-700/40 p-5 rounded-xl space-y-4">
                         <div class="flex justify-between items-center">
                             <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios (Ajuste Manual en Vivo)</h4>
@@ -107,7 +107,7 @@
                             </div>
                         </div>
 
-                        <!-- ================= CUADROS INFORMATIVOS DEL SIMULADOR ================= -->
+                        <!-- Tarjetas informativas del simulador -->
                         <div class="grid grid-cols-3 gap-2 pt-1">
                             <div class="bg-gray-800/50 border border-gray-700/40 p-2.5 rounded-lg text-center">
                                 <span class="text-[10px] text-gray-400 block uppercase font-mono">Cobertura Est.</span>
@@ -122,7 +122,6 @@
                                 <strong id="card-riesgo" class="text-xs text-amber-400">Bajo</strong>
                             </div>
                         </div>
-                        <!-- ====================================================================== -->
                     </div>
 
                     <!-- Aprobación Transaccional y Recuadros Informativos -->
@@ -136,7 +135,7 @@
                             
                             <div class="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-lg text-xs text-emerald-300 space-y-1">
                                 <p class="font-semibold">💡 Nota de Auditoría:</p>
-                                <p>La emisión de esta orden congelará los valores actuales y la curva del simulador en el log transaccional.</p>
+                                <p>La emisión de esta orden congelará los valores actuales y la curva del simulador en el log transaccional <span class="text-emerald-400 font-medium">(4. Registro de Órdenes Emitidas, disponible abajo)</span>.</p>
                             </div>
 
                             <!-- Recuadros Informativos Contextuales -->
@@ -283,7 +282,6 @@
             });
         }
 
-        // Función reactiva que actualiza al instante datos, gráfica y las tarjetas informativas nuevas
         async function actualizarSimulacionEnVivo() {
             const lt = parseFloat(document.getElementById('leadTime').value);
             const ss = parseFloat(document.getElementById('safetyStock').value) / 100;
@@ -300,7 +298,6 @@
                 
                 document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
 
-                // Actualizar tarjetas informativas dinámicas del simulador
                 const coberturaEst = (10 + (lt * 0.5) + (ss * 5)).toFixed(1);
                 const nivelServicio = (95 + (ss * 8) - (lt * 0.1)).toFixed(1);
                 document.getElementById('card-cobertura').innerText = coberturaEst + " Días";
