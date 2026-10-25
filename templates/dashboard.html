@@ -46,13 +46,13 @@
         </section>
 
         <!-- ========================================== -->
-        <!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS) -->
+        <!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS AVANZADO) -->
         <!-- ========================================== -->
         <section class="border-t border-gray-800 pt-8 space-y-6">
             <div class="bg-gray-800/40 border border-gray-700/50 p-6 rounded-2xl space-y-6">
                 <div class="flex justify-between items-center border-b border-gray-700/50 pb-4">
                     <h3 class="text-lg font-semibold text-cyan-400 flex items-center gap-2">
-                        <span>⚙️</span> Panel de Control DSS (Sistema Experto)
+                        <span>⚙️</span> Panel de Control DSS (Simulador Dinámico de Impacto)
                     </h3>
                     <button onclick="location.reload()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-3 py-1.5 rounded-lg border border-gray-600 transition">
                         🔄 Restaurar Datos Reales
@@ -68,11 +68,12 @@
                     </div>
                 </div>
 
-                <!-- Módulo 2 y 3: Simulación y Órdenes -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                    <!-- Simulador What-If -->
+                <!-- Módulo 2 y 3: Simulación Interactiva con Gráfica Dinámica y Órdenes -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
+                    
+                    <!-- Simulador What-If con Gráfico Reactivo -->
                     <div class="bg-gray-900/60 border border-gray-700/40 p-5 rounded-xl space-y-4">
-                        <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios (What-If)</h4>
+                        <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios y Curva Reactiva (What-If)</h4>
                         
                         <div>
                             <div class="flex justify-between text-xs text-gray-300 mb-1">
@@ -90,13 +91,21 @@
                             <input type="range" id="safetyStock" min="0" max="50" value="15" class="w-full accent-amber-500 cursor-pointer" onchange="document.getElementById('ss-val').innerText = this.value">
                         </div>
 
-                        <button id="btnSimular" onclick="simular()" class="w-full bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold text-sm py-2.5 rounded-lg transition">
-                            Recalcular Pedido Sugerido
+                        <button id="btnSimular" onclick="simularEscenarioGrafico()" class="w-full bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold text-sm py-2.5 rounded-lg transition shadow-lg">
+                            ⚡ Recalcular y Simular Curva
                         </button>
                         
                         <div class="text-center bg-gray-800/60 p-3 rounded-lg border border-gray-700/30">
                             <span class="text-xs text-gray-400 block">Nuevo Pedido Sugerido Ajustado:</span>
                             <strong id="resultadoPedido" class="text-emerald-400 text-lg">172 unds.</strong>
+                        </div>
+
+                        <!-- Canvas del Gráfico Reactivo de Simulación -->
+                        <div class="bg-gray-950/50 p-3 rounded-lg border border-gray-800">
+                            <span class="text-[11px] text-gray-400 block mb-2">Comportamiento Simulado del Inventario vs Límite de Reorden:</span>
+                            <div class="h-40">
+                                <canvas id="chartSimulacion"></canvas>
+                            </div>
                         </div>
                     </div>
 
@@ -107,6 +116,10 @@
                             <div>
                                 <label class="block text-xs text-gray-300 mb-1">Observaciones del Analista de Compras:</label>
                                 <input type="text" id="observacion" placeholder="Ej. Aprobado por campaña..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div class="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-lg text-xs text-emerald-300 space-y-1">
+                                <p class="font-semibold">💡 Nota de Auditoría:</p>
+                                <p>La emisión de esta orden congelará los valores actuales del simulador en el log transaccional inmutable.</p>
                             </div>
                         </div>
                         <button onclick="aprobarOrden()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-2.5 rounded-lg transition shadow-lg shadow-emerald-900/20">
@@ -140,7 +153,8 @@
     </div>
 
     <script>
-        // Carga de datos originales de la tesis
+        let chartSimInstance = null;
+
         fetch('/api/data')
             .then(res => res.json())
             .then(data => {
@@ -149,6 +163,7 @@
                 renderizarSKUs(data.recomendaciones_skus);
                 renderizarMetricasGlobales(data.metricas_globales);
                 renderizarGrafico(data.grafico);
+                inicializarGraficoSimulacion(7, 0.15);
             });
 
         function renderizarSKUs(skus) {
@@ -207,17 +222,41 @@
             });
         }
 
-        // Lógica de los nuevos módulos DSS interactivos
-        async function simular() {
+        function inicializarGraficoSimulacion(lt, ss) {
+            const ctx = document.getElementById('chartSimulacion').getContext('2d');
+            const basePoints = [150, 160, 155, 170 * (1 + ss), 180, 165 * (lt / 7), 190];
+            
+            chartSimInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7 (Proyectada)'],
+                    datasets: [
+                        { label: 'Curva Proyectada (DSS)', data: basePoints, borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', borderWidth: 2, fill: true, tension: 0.3 },
+                        { label: 'Punto de Reorden Óptimo', data: Array(7).fill(160 * (1 + ss)), borderColor: '#f43f5e', borderDash: [3, 3], borderWidth: 1.5, fill: false }
+                    ]
+                },
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#9ca3af', font: { size: 10 } } } },
+                    scales: {
+                        x: { ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
+                        y: { ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
+                    }
+                }
+            });
+        }
+
+        async function simularEscenarioGrafico() {
             const btn = document.getElementById('btnSimular');
             const textoOriginal = btn.innerText;
-            btn.innerText = "⏳ Recalculando...";
+            btn.innerText = "⏳ Recalculando Modelo...";
             btn.disabled = true;
 
-            const lt = document.getElementById('leadTime').value;
-            const ss = document.getElementById('safetyStock').value / 100;
+            const lt = parseFloat(document.getElementById('leadTime').value);
+            const ss = parseFloat(document.getElementById('safetyStock').value) / 100;
             
-            setTimeout(async () => {
+            try {
                 const response = await fetch('/api/simular', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ lead_time: lt, safety_stock: ss })
@@ -225,14 +264,26 @@
                 const data = await response.json();
                 
                 document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
+
+                if(chartSimInstance) {
+                    const factor = (lt / 7) * (1 + ss);
+                    const nuevasUnidades = [140*factor, 155*factor, 148*factor, 165*factor, 172*factor, 180*factor, data.nuevo_pedido];
+                    chartSimInstance.data.datasets[0].data = nuevasUnidades;
+                    chartSimInstance.data.datasets[1].data = Array(7).fill(150 * (1 + ss));
+                    chartSimInstance.update();
+                }
+
+            } catch(e) {
+                console.error(e);
+            } finally {
                 btn.innerText = textoOriginal;
                 btn.disabled = false;
-            }, 600);
+            }
         }
 
         async function aprobarOrden() {
             const qtyText = document.getElementById('resultadoPedido').innerText;
-            const obs = document.getElementById('observacion').value || 'Sin observaciones';
+            const obs = document.getElementById('observacion').value || 'Sin observaciones (Simulación What-If)';
             
             const response = await fetch('/api/ordenes/crear', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
