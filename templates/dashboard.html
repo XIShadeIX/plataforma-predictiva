@@ -1,123 +1,326 @@
-<!-- ========================================== -->
-<!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS) -->
-<!-- ========================================== -->
-<div style="margin: 40px 20px; padding: 25px; background-color: #1e1e2f; color: white; border-radius: 8px; border: 1px solid #444; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
-    
-    <h3 style="color: #00d2ff; margin-bottom: 20px; font-family: sans-serif;">⚙️ Panel de Control DSS (Sistema de Soporte a la Decisión)</h3>
-    
-    <!-- Módulo 1: Ingesta -->
-    <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #333; font-family: sans-serif;">
-        <h5 style="margin-bottom: 15px;">1. Ingesta Dinámica de Datos (Agnóstico a la Empresa)</h5>
-        <input type="file" id="csvFile" style="margin-right: 15px; color: #ccc;">
-        <button onclick="subirDatos()" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Subir Dataset y Reentrenar</button>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plataforma Web Predictiva - Gestión de Inventarios</title>
+    <style>
+        body {
+            background-color: #12121c;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        h1 {
+            color: #00d2ff;
+            font-size: 1.8em;
+            margin-bottom: 5px;
+        }
+        .subtitle {
+            color: #aaa;
+            font-size: 1em;
+        }
+        .alert-box {
+            background-color: #ff4757;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .grid-skus {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 20px;
+            margin-bottom: 40px;
+        }
+        .sku-card {
+            background-color: #1e1e2f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 15px;
+            position: relative;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        .sku-card h4 {
+            margin: 0 0 10px 0;
+            color: #fff;
+            font-size: 1.1em;
+        }
+        .badge-risk {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background-color: #ff4757;
+            color: white;
+            padding: 3px 8px;
+            font-size: 0.75em;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .sku-metric {
+            font-size: 0.85em;
+            color: #bbb;
+            margin: 5px 0;
+        }
+        .sku-val {
+            color: #00ff00;
+            font-weight: bold;
+        }
+        .metrics-summary {
+            background-color: #1e1e2f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 40px;
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 15px;
+            text-align: center;
+        }
+        .metric-box h3 {
+            margin: 0 0 5px 0;
+            color: #00d2ff;
+            font-size: 1.4em;
+        }
+        .metric-box p {
+            margin: 0;
+            color: #aaa;
+            font-size: 0.85em;
+        }
+        .chart-section {
+            background-color: #1e1e2f;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+        .chart-placeholder {
+            height: 250px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #666;
+            border: 2px dashed #444;
+            border-radius: 6px;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Plataforma Web de Gestión de Inventarios</h1>
+        <div class="subtitle">Sistema Predictivo Multi-SKU (Modelo Híbrido ARIMA-LSTM) — Categoría A</div>
+    </header>
+
+    <div class="alert-box">
+        ⚠️ 6 de 8 productos en riesgo ALTO. Monitoreo continuo en SKUs estratégicos.
     </div>
 
-    <!-- Módulo 2 y 3: Simulación y Órdenes -->
-    <div style="display: flex; gap: 30px; flex-wrap: wrap; font-family: sans-serif;">
+    <!-- SECCIÓN 1: TARJETAS DE PRODUCTOS / SKUs -->
+    <h3>Planificación de Reabastecimiento por Producto</h3>
+    <div class="grid-skus" id="skuGrid">
+        <!-- Las tarjetas se generan o se muestran estáticas para la tesis -->
+        <div class="sku-card">
+            <span class="badge-risk">Riesgo Alto</span>
+            <h4>SOS001L12P</h4>
+            <div class="sku-metric">Pronóstico Próx. Semana: <strong>38,004.2 unds.</strong></div>
+            <div class="sku-metric">Pedido Sugerido: <span class="sku-val" id="resultadoPedido">42,704.81 unds.</span></div>
+            <div class="sku-metric">Tasa Quiebre: <strong style="color: #ff4757;">37.5%</strong></div>
+        </div>
+        <div class="sku-card">
+            <span class="badge-risk">Riesgo Alto</span>
+            <h4>SOS005L04P</h4>
+            <div class="sku-metric">Pronóstico Próx. Semana: <strong>33,336.95 unds.</strong></div>
+            <div class="sku-metric">Pedido Sugerido: <span class="sku-val">37,337.38 unds.</span></div>
+            <div class="sku-metric">Tasa Quiebre: <strong style="color: #ff4757;">37.5%</strong></div>
+        </div>
+        <div class="sku-card">
+            <span class="badge-risk">Riesgo Alto</span>
+            <h4>SOS002L09P</h4>
+            <div class="sku-metric">Pronóstico Próx. Semana: <strong>25,743.97 unds.</strong></div>
+            <div class="sku-metric">Pedido Sugerido: <span class="sku-val">28,833.24 unds.</span></div>
+            <div class="sku-metric">Tasa Quiebre: <strong style="color: #ff4757;">37.5%</strong></div>
+        </div>
+        <div class="sku-card">
+            <span class="badge-risk">Riesgo Medio</span>
+            <h4>ATN01K24P</h4>
+            <div class="sku-metric">Pronóstico Próx. Semana: <strong>21,578.36 unds.</strong></div>
+            <div class="sku-metric">Pedido Sugerido: <span class="sku-val">24,815.12 unds.</span></div>
+            <div class="sku-metric">Tasa Quiebre: <strong style="color: #ffc107;">25%</strong></div>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 2: RESUMEN DE INDICADORES (O1 vs O2) -->
+    <div class="metrics-summary">
+        <div class="metric-box">
+            <h3>102%</h3>
+            <p>MAPE (Error Relativo)</p>
+        </div>
+        <div class="metric-box">
+            <h3>37.5%</h3>
+            <p>Tasa Quiebre</p>
+        </div>
+        <div class="metric-box">
+            <h3>14.2%</h3>
+            <p>Ventas Perdidas</p>
+        </div>
+        <div class="metric-box">
+            <h3>85.8%</h3>
+            <p>Fill Rate</p>
+        </div>
+        <div class="metric-box">
+            <h3>62.5%</h3>
+            <p>OTD (Despachos a Tiempo)</p>
+        </div>
+        <div class="metric-box">
+            <h3>0.0411s</h3>
+            <p>Tiempo Respuesta</p>
+        </div>
+    </div>
+
+    <!-- SECCIÓN 3: GRÁFICA DE TENDENCIA -->
+    <div class="chart-section">
+        <h4 style="color: #00d2ff; margin-top: 0;">Curva de Demanda Real vs. Pronóstico Híbrido ARIMA-LSTM</h4>
+        <div class="chart-placeholder">
+            [Gráfica Interactiva de Series Temporales y Validación Walk-Forward Activa]
+        </div>
+    </div>
+
+
+    <!-- ========================================== -->
+    <!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS) -->
+    <!-- ========================================== -->
+    <div style="margin: 40px 0; padding: 25px; background-color: #1e1e2f; color: white; border-radius: 8px; border: 1px solid #444; box-shadow: 0 4px 6px rgba(0,0,0,0.3);">
         
-        <div style="flex: 1; min-width: 300px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h5 style="color: #ffc107; margin: 0;">2. Simulador de Escenarios (What-If)</h5>
-                <button onclick="location.reload()" style="background-color: transparent; color: #aaa; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">🔄 Restaurar Datos Reales</button>
+        <h3 style="color: #00d2ff; margin-bottom: 20px; font-family: sans-serif;">⚙️ Panel de Control DSS (Sistema de Soporte a la Decisión)</h3>
+        
+        <!-- Módulo 1: Ingesta -->
+        <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #333; font-family: sans-serif;">
+            <h5 style="margin-bottom: 15px;">1. Ingesta Dinámica de Datos (Agnóstico a la Empresa)</h5>
+            <input type="file" id="csvFile" style="margin-right: 15px; color: #ccc;">
+            <button onclick="subirDatos()" style="background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold;">Subir Dataset y Reentrenar</button>
+        </div>
+
+        <!-- Módulo 2 y 3: Simulación y Órdenes -->
+        <div style="display: flex; gap: 30px; flex-wrap: wrap; font-family: sans-serif;">
+            
+            <div style="flex: 1; min-width: 300px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h5 style="color: #ffc107; margin: 0;">2. Simulador de Escenarios (What-If)</h5>
+                    <button onclick="location.reload()" style="background-color: transparent; color: #aaa; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">🔄 Restaurar Datos Reales</button>
+                </div>
+                <p style="margin-bottom: 10px; font-size: 0.9em;">Lead Time del Proveedor (Días): <strong id="lt-val">7</strong></p>
+                <input type="range" id="leadTime" min="1" max="30" value="7" style="width: 100%; margin-bottom: 20px;" onchange="document.getElementById('lt-val').innerText = this.value">
+                
+                <p style="margin-bottom: 10px; font-size: 0.9em;">Stock de Seguridad Extra (%): <strong id="ss-val">15</strong></p>
+                <input type="range" id="safetyStock" min="0" max="50" value="15" style="width: 100%; margin-bottom: 20px;" onchange="document.getElementById('ss-val').innerText = this.value">
+                
+                <button id="btnSimular" onclick="simular()" style="background-color: #ffc107; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">Recalcular Pedido Sugerido</button>
+                <p style="margin-top: 20px; font-size: 1.2em; text-align: center;">Nuevo Pedido Sugerido: <strong id="resultadoPedidoFooter" style="color: #00ff00; font-size: 1.3em;">172</strong> unds.</p>
             </div>
-            <p style="margin-bottom: 10px; font-size: 0.9em;">Lead Time del Proveedor (Días): <strong id="lt-val">7</strong></p>
-            <input type="range" id="leadTime" min="1" max="30" value="7" style="width: 100%; margin-bottom: 20px;" onchange="document.getElementById('lt-val').innerText = this.value">
-            
-            <p style="margin-bottom: 10px; font-size: 0.9em;">Stock de Seguridad Extra (%): <strong id="ss-val">15</strong></p>
-            <input type="range" id="safetyStock" min="0" max="50" value="15" style="width: 100%; margin-bottom: 20px;" onchange="document.getElementById('ss-val').innerText = this.value">
-            
-            <button id="btnSimular" onclick="simular()" style="background-color: #ffc107; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">Recalcular Pedido Sugerido</button>
-            <p style="margin-top: 20px; font-size: 1.2em; text-align: center;">Nuevo Pedido Sugerido: <strong id="resultadoPedido" style="color: #00ff00; font-size: 1.3em;">172</strong> unds.</p>
+
+            <div style="flex: 1; min-width: 300px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333;">
+                <h5 style="color: #28a745; margin-bottom: 20px;">3. Aprobación Transaccional</h5>
+                <p style="margin-bottom: 10px; font-size: 0.9em;">Observaciones del Analista de Compras:</p>
+                <input type="text" id="observacion" placeholder="Ej. Aprobado con stock extra por huelga de transporte..." style="width: 90%; padding: 12px; margin-bottom: 25px; border-radius: 5px; border: none; background-color: #1e1e2f; color: white;">
+                <button onclick="aprobarOrden()" style="background-color: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.05em;">✅ Emitir Orden de Compra</button>
+            </div>
+
         </div>
 
-        <div style="flex: 1; min-width: 300px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-            <h5 style="color: #28a745; margin-bottom: 20px;">3. Aprobación Transaccional</h5>
-            <p style="margin-bottom: 10px; font-size: 0.9em;">Observaciones del Analista de Compras:</p>
-            <input type="text" id="observacion" placeholder="Ej. Aprobado con stock extra por huelga de transporte..." style="width: 90%; padding: 12px; margin-bottom: 25px; border-radius: 5px; border: none; background-color: #1e1e2f; color: white;">
-            <button onclick="aprobarOrden()" style="background-color: #28a745; color: white; border: none; padding: 12px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.05em;">✅ Emitir Orden de Compra</button>
+        <!-- Módulo 4: Historial Transaccional -->
+        <div style="margin-top: 30px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333; font-family: sans-serif;">
+            <h5 style="color: #00d2ff; margin-bottom: 15px;">4. Registro de Órdenes Emitidas (Log Transaccional)</h5>
+            <table style="width: 100%; border-collapse: collapse; color: white; text-align: left;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #555;">
+                        <th style="padding: 10px;">ID Orden</th>
+                        <th style="padding: 10px;">Fecha/Hora</th>
+                        <th style="padding: 10px;">Cantidad</th>
+                        <th style="padding: 10px;">Observación</th>
+                        <th style="padding: 10px;">Estado</th>
+                    </tr>
+                </thead>
+                <tbody id="tablaOrdenes">
+                    <!-- Las órdenes aparecerán aquí dinámicamente -->
+                </tbody>
+            </table>
         </div>
 
     </div>
 
-    <!-- Módulo 4: Historial Transaccional -->
-    <div style="margin-top: 30px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333; font-family: sans-serif;">
-        <h5 style="color: #00d2ff; margin-bottom: 15px;">4. Registro de Órdenes Emitidas (Log Transaccional)</h5>
-        <table style="width: 100%; border-collapse: collapse; color: white; text-align: left;">
-            <thead>
-                <tr style="border-bottom: 2px solid #555;">
-                    <th style="padding: 10px;">ID Orden</th>
-                    <th style="padding: 10px;">Fecha/Hora</th>
-                    <th style="padding: 10px;">Cantidad</th>
-                    <th style="padding: 10px;">Observación</th>
-                    <th style="padding: 10px;">Estado</th>
-                </tr>
-            </thead>
-            <tbody id="tablaOrdenes">
-                <!-- Las órdenes aparecerán aquí dinámicamente -->
-            </tbody>
-        </table>
-    </div>
+    <script>
+        async function simular() {
+            const btn = document.getElementById('btnSimular');
+            const textoOriginal = btn.innerText;
+            btn.innerText = "⏳ Recalculando con ARIMA-LSTM...";
+            btn.disabled = true;
 
-</div>
+            const lt = document.getElementById('leadTime').value;
+            const ss = document.getElementById('safetyStock').value / 100;
+            
+            setTimeout(async () => {
+                const response = await fetch('/api/simular', {
+                    method: 'POST', headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ lead_time: lt, safety_stock: ss })
+                });
+                const data = await response.json();
+                
+                document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
+                document.getElementById('resultadoPedidoFooter').innerText = data.nuevo_pedido;
+                btn.innerText = textoOriginal;
+                btn.disabled = false;
+            }, 800);
+        }
 
-<script>
-    async function simular() {
-        const btn = document.getElementById('btnSimular');
-        const textoOriginal = btn.innerText;
-        btn.innerText = "⏳ Recalculando con ARIMA-LSTM...";
-        btn.disabled = true;
-
-        const lt = document.getElementById('leadTime').value;
-        const ss = document.getElementById('safetyStock').value / 100;
-        
-        setTimeout(async () => {
-            const response = await fetch('/api/simular', {
+        async function aprobarOrden() {
+            const qty = document.getElementById('resultadoPedidoFooter').innerText;
+            const obs = document.getElementById('observacion').value || 'Sin observaciones';
+            
+            const response = await fetch('/api/ordenes/crear', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ lead_time: lt, safety_stock: ss })
+                body: JSON.stringify({ qty: qty, obs: obs })
             });
             const data = await response.json();
             
-            document.getElementById('resultadoPedido').innerText = data.nuevo_pedido;
-            btn.innerText = textoOriginal;
-            btn.disabled = false;
-        }, 800);
-    }
+            const tabla = document.getElementById('tablaOrdenes');
+            const fecha = new Date().toLocaleString();
+            const idOrden = 'ORD-' + Math.floor(Math.random() * 10000);
+            
+            const nuevaFila = `<tr style="border-bottom: 1px solid #444;">
+                <td style="padding: 10px; color: #ffc107;">${idOrden}</td>
+                <td style="padding: 10px;">${fecha}</td>
+                <td style="padding: 10px; font-weight: bold;">${qty} unds.</td>
+                <td style="padding: 10px;">${obs}</td>
+                <td style="padding: 10px;"><span style="background-color: #28a745; padding: 3px 8px; border-radius: 3px; font-size: 0.8em;">Enviado a Proveedor</span></td>
+            </tr>`;
+            
+            tabla.innerHTML += nuevaFila;
+            document.getElementById('observacion').value = '';
+            alert(data.mensaje);
+        }
 
-    async function aprobarOrden() {
-        const qty = document.getElementById('resultadoPedido').innerText;
-        const obs = document.getElementById('observacion').value || 'Sin observaciones';
-        
-        const response = await fetch('/api/ordenes/crear', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ qty: qty, obs: obs })
-        });
-        const data = await response.json();
-        
-        const tabla = document.getElementById('tablaOrdenes');
-        const fecha = new Date().toLocaleString();
-        const idOrden = 'ORD-' + Math.floor(Math.random() * 10000);
-        
-        const nuevaFila = `<tr style="border-bottom: 1px solid #444;">
-            <td style="padding: 10px; color: #ffc107;">${idOrden}</td>
-            <td style="padding: 10px;">${fecha}</td>
-            <td style="padding: 10px; font-weight: bold;">${qty} unds.</td>
-            <td style="padding: 10px;">${obs}</td>
-            <td style="padding: 10px;"><span style="background-color: #28a745; padding: 3px 8px; border-radius: 3px; font-size: 0.8em;">Enviado a Proveedor</span></td>
-        </tr>`;
-        
-        tabla.innerHTML += nuevaFila;
-        document.getElementById('observacion').value = '';
-        alert(data.mensaje);
-    }
-
-    async function subirDatos() {
-        const input = document.getElementById('csvFile');
-        if(input.files.length === 0) { alert("Seleccione un archivo transaccional (CSV/Excel) primero."); return; }
-        const formData = new FormData();
-        formData.append("file", input.files[0]);
-        const response = await fetch('/api/upload', { method: 'POST', body: formData });
-        const data = await response.json();
-        alert(data.mensaje);
-    }
-</script>
-<!-- ========================================== -->
+        async function subirDatos() {
+            const input = document.getElementById('csvFile');
+            if(input.files.length === 0) { alert("Seleccione un archivo transaccional (CSV/Excel) primero."); return; }
+            const formData = new FormData();
+            formData.append("file", input.files[0]);
+            const response = await fetch('/api/upload', { method: 'POST', body: formData });
+            const data = await response.json();
+            alert(data.mensaje);
+        }
+    </script>
+</body>
+</html>
