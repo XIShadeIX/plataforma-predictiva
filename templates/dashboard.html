@@ -59,13 +59,21 @@
                     </button>
                 </div>
 
-                <!-- Módulo 1: Ingesta -->
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-gray-300">1. Ingesta Dinámica de Datos (Agnóstico a la Empresa)</label>
-                    <div class="flex items-center gap-4">
-                        <input type="file" id="csvFile" class="text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-600 file:text-white hover:file:bg-blue-500 cursor:pointer">
-                        <button onclick="subirDatos()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm px-4 py-2 rounded-lg transition">Subir Dataset y Reentrenar</button>
+                <!-- Módulo 1: Ingesta con Escenarios Predefinidos Locales -->
+                <div class="space-y-3">
+                    <label class="block text-sm font-medium text-gray-300">1. Ingesta Dinámica de Datos (Escenarios de Prueba para Demo)</label>
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button onclick="cargarEscenarioLocal('estable')" class="bg-blue-600/80 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition border border-blue-400/30 cursor-pointer">
+                            📊 Escenario A: Demanda Estable
+                        </button>
+                        <button onclick="cargarEscenarioLocal('campana')" class="bg-purple-600/80 hover:bg-purple-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition border border-purple-400/30 cursor-pointer">
+                            🚀 Escenario B: Pico por Campaña
+                        </button>
+                        <button onclick="cargarEscenarioLocal('quiebre')" class="bg-amber-600/80 hover:bg-amber-500 text-white text-xs font-semibold px-3 py-2 rounded-lg transition border border-amber-400/30 cursor-pointer">
+                            ⚠️ Escenario C: Quiebre Logístico
+                        </button>
                     </div>
+                    <p class="text-[11px] text-gray-400">💡 Al seleccionar un escenario local, el sistema procesa el dataset integrado de forma agnóstica y actualiza los indicadores en tiempo real.</p>
                 </div>
 
                 <!-- Módulo 2 y 3: Simulación Reactiva y Órdenes -->
@@ -327,6 +335,23 @@
             }
         }
 
+        async function cargarEscenarioLocal(tipo) {
+            alert(`🔄 Procesando [Escenario: ${tipo.toUpperCase()}], aplicando simulación algorítmica...`);
+            try {
+                const response = await fetch(`/api/cargar-escenario/${tipo}`, { method: 'POST' });
+                const data = await response.json();
+                if(response.ok) {
+                    alert("✅ " + data.mensaje);
+                    location.reload();
+                } else {
+                    alert("⚠️ Error: " + data.error);
+                }
+            } catch(e) {
+                alert("⚠️ Error de conexión al cargar el escenario local.");
+                console.error(e);
+            }
+        }
+
         async function aprobarOrden() {
             const qtyText = document.getElementById('resultadoPedido').innerText;
             const obs = document.getElementById('observacion').value || 'Sin observaciones (Simulación What-If)';
@@ -351,16 +376,6 @@
             
             tabla.innerHTML += nuevaFila;
             document.getElementById('observacion').value = '';
-            alert(data.mensaje);
-        }
-
-        async function subirDatos() {
-            const input = document.getElementById('csvFile');
-            if(input.files.length === 0) { alert("Seleccione un archivo transaccional (CSV/Excel) primero."); return; }
-            const formData = new FormData();
-            formData.append("file", input.files[0]);
-            const response = await fetch('/api/upload', { method: 'POST', body: formData });
-            const data = await response.json();
             alert(data.mensaje);
         }
     </script>
