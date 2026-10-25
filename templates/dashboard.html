@@ -46,13 +46,13 @@
         </section>
 
         <!-- ========================================== -->
-        <!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS AVANZADO) -->
+        <!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS EN TIEMPO REAL) -->
         <!-- ========================================== -->
         <section class="border-t border-gray-800 pt-8 space-y-6">
             <div class="bg-gray-800/40 border border-gray-700/50 p-6 rounded-2xl space-y-6">
                 <div class="flex justify-between items-center border-b border-gray-700/50 pb-4">
                     <h3 class="text-lg font-semibold text-cyan-400 flex items-center gap-2">
-                        <span>⚙️</span> Panel de Control DSS (Simulador Dinámico de Impacto)
+                        <span>⚙️</span> Panel de Control DSS (Simulador Reactivo en Tiempo Real)
                     </h3>
                     <button onclick="location.reload()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-3 py-1.5 rounded-lg border border-gray-600 transition">
                         🔄 Restaurar Datos Reales
@@ -68,19 +68,22 @@
                     </div>
                 </div>
 
-                <!-- Módulo 2 y 3: Simulación Interactiva con Gráfica Dinámica y Órdenes -->
+                <!-- Módulo 2 y 3: Simulación Reactiva y Órdenes -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                     
-                    <!-- Simulador What-If con Gráfico Reactivo -->
+                    <!-- Simulador What-If Reactivo (Sin botón, automático al deslizar) -->
                     <div class="bg-gray-900/60 border border-gray-700/40 p-5 rounded-xl space-y-4">
-                        <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios y Curva Reactiva (What-If)</h4>
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios (Ajuste Manual en Vivo)</h4>
+                            <span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[10px] px-2 py-0.5 rounded font-mono">⚡ Tiempo Real</span>
+                        </div>
                         
                         <div>
                             <div class="flex justify-between text-xs text-gray-300 mb-1">
                                 <span>Lead Time del Proveedor (Días):</span>
                                 <strong id="lt-val" class="text-amber-400">7</strong>
                             </div>
-                            <input type="range" id="leadTime" min="1" max="30" value="7" class="w-full accent-amber-500 cursor-pointer" onchange="document.getElementById('lt-val').innerText = this.value">
+                            <input type="range" id="leadTime" min="1" max="30" value="7" class="w-full accent-amber-500 cursor-pointer" oninput="actualizarSimulacionEnVivo()">
                         </div>
 
                         <div>
@@ -88,12 +91,8 @@
                                 <span>Stock de Seguridad Extra (%):</span>
                                 <strong id="ss-val" class="text-amber-400">15</strong>%
                             </div>
-                            <input type="range" id="safetyStock" min="0" max="50" value="15" class="w-full accent-amber-500 cursor-pointer" onchange="document.getElementById('ss-val').innerText = this.value">
+                            <input type="range" id="safetyStock" min="0" max="50" value="15" class="w-full accent-amber-500 cursor-pointer" oninput="actualizarSimulacionEnVivo()">
                         </div>
-
-                        <button id="btnSimular" onclick="simularEscenarioGrafico()" class="w-full bg-amber-500 hover:bg-amber-400 text-gray-950 font-bold text-sm py-2.5 rounded-lg transition shadow-lg">
-                            ⚡ Recalcular y Simular Curva
-                        </button>
                         
                         <div class="text-center bg-gray-800/60 p-3 rounded-lg border border-gray-700/30">
                             <span class="text-xs text-gray-400 block">Nuevo Pedido Sugerido Ajustado:</span>
@@ -119,7 +118,7 @@
                             </div>
                             <div class="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-lg text-xs text-emerald-300 space-y-1">
                                 <p class="font-semibold">💡 Nota de Auditoría:</p>
-                                <p>La emisión de esta orden congelará los valores actuales del simulador en el log transaccional inmutable.</p>
+                                <p>La emisión de esta orden congelará los valores actuales y la curva del simulador en el log transaccional.</p>
                             </div>
                         </div>
                         <button onclick="aprobarOrden()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-2.5 rounded-lg transition shadow-lg shadow-emerald-900/20">
@@ -247,15 +246,15 @@
             });
         }
 
-        async function simularEscenarioGrafico() {
-            const btn = document.getElementById('btnSimular');
-            const textoOriginal = btn.innerText;
-            btn.innerText = "⏳ Recalculando Modelo...";
-            btn.disabled = true;
-
+        // Función que se ejecuta AUTOMÁTICAMENTE al mover los sliders en tiempo real
+        async function actualizarSimulacionEnVivo() {
             const lt = parseFloat(document.getElementById('leadTime').value);
             const ss = parseFloat(document.getElementById('safetyStock').value) / 100;
             
+            // Actualizar etiquetas visuales de los sliders de inmediato
+            document.getElementById('lt-val').innerText = lt;
+            document.getElementById('ss-val').innerText = Math.round(ss * 100);
+
             try {
                 const response = await fetch('/api/simular', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
@@ -265,19 +264,16 @@
                 
                 document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
 
+                // Actualizar la gráfica dinámicamente al vuelo
                 if(chartSimInstance) {
                     const factor = (lt / 7) * (1 + ss);
                     const nuevasUnidades = [140*factor, 155*factor, 148*factor, 165*factor, 172*factor, 180*factor, data.nuevo_pedido];
                     chartSimInstance.data.datasets[0].data = nuevasUnidades;
                     chartSimInstance.data.datasets[1].data = Array(7).fill(150 * (1 + ss));
-                    chartSimInstance.update();
+                    chartSimInstance.update('none'); // 'none' permite actualización ultra fluida sin parpadeos
                 }
-
             } catch(e) {
                 console.error(e);
-            } finally {
-                btn.innerText = textoOriginal;
-                btn.disabled = false;
             }
         }
 
