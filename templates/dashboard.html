@@ -73,7 +73,7 @@
                             ⚠️ Escenario C: Quiebre Logístico
                         </button>
                     </div>
-                    <p class="text-[11px] text-gray-400">💡 Al seleccionar un escenario predefinido, el sistema simula la ingesta algorítmica y adapta los gráficos principales de forma instantánea.</p>
+                    <p class="text-[11px] text-gray-400">💡 Al seleccionar un escenario predefinido, el sistema ajusta dinámicamente los parámetros, curvas y métricas del simulador inferior.</p>
                 </div>
 
                 <!-- Módulo 2 y 3: Simulación Reactiva y Órdenes -->
@@ -294,32 +294,61 @@
             });
         }
 
-        // Función para cambiar escenarios predefinidos instantáneamente en frontend y reflejarlo en el gráfico
+        // Función para cambiar escenarios predefinidos afectando directamente al SIMULADOR DSS DE ABAJO
         function cambiarEscenarioPredefinido(tipo) {
-            alert(`⚡ [Escenario ${tipo.toUpperCase()} cargado con éxito]: Ingesta simulada y reentrenamiento algorítmico completado.`);
+            alert(`⚡ [Escenario ${tipo.toUpperCase()} cargado en el DSS]: Simulador ajustado al escenario seleccionado.`);
             
-            if(chartDemandaInstance) {
-                let nuevosDatosO2 = [];
-                let nuevosDatosO1 = [];
+            const chartSim = Chart.getChart("chartSimulacion");
+            
+            if (chartSim) {
+                let nuevosValores = [];
+                let pedidoSugerido = 0;
+                let cobertura = "14.0 Días";
+                let servicio = "98.0%";
+                let riesgoTexto = "Bajo";
+                let riesgoClase = "text-xs text-emerald-400";
                 let tituloAlerta = "";
 
-                if(tipo === 'estable') {
-                    nuevosDatosO2 = [140000, 145000, 142000, 148000, 146000, 149000, 147000];
-                    nuevosDatosO1 = [140000, 140000, 140000, 140000, 140000, 140000, 140000];
-                    tituloAlerta = "Flujo de inventario estable - Categoría A (Demanda controlada)";
-                } else if(tipo === 'campana') {
-                    nuevosDatosO2 = [180000, 220000, 310000, 380000, 350000, 420000, 390000];
-                    nuevosDatosO1 = [140000, 140000, 140000, 140000, 140000, 140000, 140000];
-                    tituloAlerta = "⚠️ ¡Pico crítico por campaña comercial detectado! Reabastecimiento masivo requerido.";
-                } else if(tipo === 'quiebre') {
-                    nuevosDatosO2 = [150000, 90000, 40000, 15000, 8000, 3000, 1000];
-                    nuevosDatosO1 = [140000, 140000, 140000, 140000, 140000, 140000, 140000];
-                    tituloAlerta = "🚨 Alerta roja: Riesgo inminente de quiebre de stock por retraso logístico.";
+                if (tipo === 'estable') {
+                    nuevosValores = [150, 155, 152, 158, 155, 160, 153];
+                    pedidoSugerido = 165;
+                    cobertura = "15.0 Días";
+                    servicio = "98.5%";
+                    riesgoTexto = "Bajo";
+                    riesgoClase = "text-xs text-emerald-400";
+                    tituloAlerta = "Flujo de inventario estable - Operación bajo control";
+                } else if (tipo === 'campana') {
+                    nuevosValores = [200, 280, 390, 480, 450, 520, 460];
+                    pedidoSugerido = 510;
+                    cobertura = "8.2 Días";
+                    servicio = "91.0%";
+                    riesgoTexto = "Moderado";
+                    riesgoClase = "text-xs text-amber-400";
+                    tituloAlerta = "⚠️ Pico de demanda por campaña comercial activo en el simulador.";
+                } else if (tipo === 'quiebre') {
+                    nuevosValores = [180, 120, 70, 40, 25, 15, 10];
+                    pedidoSugerido = 650;
+                    cobertura = "3.1 Días";
+                    servicio = "74.5%";
+                    riesgoTexto = "Crítico";
+                    riesgoClase = "text-xs text-red-400";
+                    tituloAlerta = "🚨 Alerta de quiebre logístico en el simulador. Se requiere orden urgente.";
                 }
 
-                chartDemandaInstance.data.datasets[1].data = nuevosDatosO2;
-                chartDemandaInstance.data.datasets[2].data = nuevosDatosO1;
-                chartDemandaInstance.update();
+                // Actualizar el gráfico de abajo (Simulador)
+                chartSim.data.datasets[0].data = nuevosValores;
+                chartSim.update();
+
+                // Actualizar las tarjetas métricas y el pedido sugerido del simulador
+                document.getElementById('resultadoPedido').innerText = pedidoSugerido + " unds.";
+                document.getElementById('card-cobertura').innerText = cobertura;
+                document.getElementById('card-servicio').innerText = servicio;
+                
+                const riesgoEl = document.getElementById('card-riesgo');
+                riesgoEl.innerText = riesgoTexto;
+                riesgoEl.className = riesgoClase;
+
+                // Actualizar banner superior
                 document.getElementById('banner-titulo').innerText = tituloAlerta;
             }
         }
@@ -357,12 +386,13 @@
                     riesgoEl.className = "text-xs text-red-400";
                 }
 
-                if(chartSimInstance) {
+                const chartSim = Chart.getChart("chartSimulacion");
+                if(chartSim) {
                     const factor = (lt / 7) * (1 + ss);
                     const nuevasUnidades = [140*factor, 155*factor, 148*factor, 165*factor, 172*factor, 180*factor, data.nuevo_pedido];
-                    chartSimInstance.data.datasets[0].data = nuevasUnidades;
-                    chartSimInstance.data.datasets[1].data = Array(7).fill(160 * (1 + ss));
-                    chartSimInstance.update('none');
+                    chartSim.data.datasets[0].data = nuevasUnidades;
+                    chartSim.data.datasets[1].data = Array(7).fill(160 * (1 + ss));
+                    chartSim.update('none');
                 }
             } catch(e) {
                 console.error(e);
