@@ -294,20 +294,33 @@
             });
         }
 
-        // Función para cambiar escenarios predefinidos instantáneamente en frontend
+        // Función para cambiar escenarios predefinidos instantáneamente en frontend y reflejarlo en el gráfico
         function cambiarEscenarioPredefinido(tipo) {
             alert(`⚡ [Escenario ${tipo.toUpperCase()} cargado con éxito]: Ingesta simulada y reentrenamiento algorítmico completado.`);
             
-            // Simular alteración dinámica de la gráfica principal según el escenario elegido
             if(chartDemandaInstance) {
-                let nuevosDatos = [120000, 150000, 130000, 160000, 155000, 170000, 145000];
-                if(tipo === 'campana') {
-                    nuevosDatos = [150000, 180000, 240000, 310000, 290000, 350000, 280000];
+                let nuevosDatosO2 = [];
+                let nuevosDatosO1 = [];
+                let tituloAlerta = "";
+
+                if(tipo === 'estable') {
+                    nuevosDatosO2 = [140000, 145000, 142000, 148000, 146000, 149000, 147000];
+                    nuevosDatosO1 = [140000, 140000, 140000, 140000, 140000, 140000, 140000];
+                    tituloAlerta = "Flujo de inventario estable - Categoría A (Demanda controlada)";
+                } else if(tipo === 'campana') {
+                    nuevosDatosO2 = [180000, 220000, 310000, 380000, 350000, 420000, 390000];
+                    nuevosDatosO1 = [140000, 140000, 140000, 140000, 140000, 140000, 140000];
+                    tituloAlerta = "⚠️ ¡Pico crítico por campaña comercial detectado! Reabastecimiento masivo requerido.";
                 } else if(tipo === 'quiebre') {
-                    nuevosDatos = [150000, 110000, 50000, 20000, 10000, 5000, 2000];
+                    nuevosDatosO2 = [150000, 90000, 40000, 15000, 8000, 3000, 1000];
+                    nuevosDatosO1 = [140000, 140000, 140000, 140000, 140000, 140000, 140000];
+                    tituloAlerta = "🚨 Alerta roja: Riesgo inminente de quiebre de stock por retraso logístico.";
                 }
-                chartDemandaInstance.data.datasets[1].data = nuevosDatos;
+
+                chartDemandaInstance.data.datasets[1].data = nuevosDatosO2;
+                chartDemandaInstance.data.datasets[2].data = nuevosDatosO1;
                 chartDemandaInstance.update();
+                document.getElementById('banner-titulo').innerText = tituloAlerta;
             }
         }
 
@@ -348,7 +361,7 @@
                     const factor = (lt / 7) * (1 + ss);
                     const nuevasUnidades = [140*factor, 155*factor, 148*factor, 165*factor, 172*factor, 180*factor, data.nuevo_pedido];
                     chartSimInstance.data.datasets[0].data = nuevasUnidades;
-                    chartSimInstance.data.datasets[1].data = Array(7).fill(150 * (1 + ss));
+                    chartSimInstance.data.datasets[1].data = Array(7).fill(160 * (1 + ss));
                     chartSimInstance.update('none');
                 }
             } catch(e) {
