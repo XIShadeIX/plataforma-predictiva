@@ -71,7 +71,7 @@
                 <!-- Módulo 2 y 3: Simulación Reactiva y Órdenes -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                     
-                    <!-- Simulador What-If Reactivo -->
+                    <!-- Simulador What-If Reactivo con Tarjetas Informativas Integradas -->
                     <div class="bg-gray-900/60 border border-gray-700/40 p-5 rounded-xl space-y-4">
                         <div class="flex justify-between items-center">
                             <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios (Ajuste Manual en Vivo)</h4>
@@ -102,10 +102,27 @@
                         <!-- Canvas del Gráfico Reactivo de Simulación -->
                         <div class="bg-gray-950/50 p-3 rounded-lg border border-gray-800">
                             <span class="text-[11px] text-gray-400 block mb-2">Comportamiento Simulado del Inventario vs Límite de Reorden:</span>
-                            <div class="h-40">
+                            <div class="h-36">
                                 <canvas id="chartSimulacion"></canvas>
                             </div>
                         </div>
+
+                        <!-- ================= CUADROS INFORMATIVOS DEL SIMULADOR ================= -->
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <div class="bg-gray-800/50 border border-gray-700/40 p-2.5 rounded-lg text-center">
+                                <span class="text-[10px] text-gray-400 block uppercase font-mono">Cobertura Est.</span>
+                                <strong id="card-cobertura" class="text-xs text-cyan-400">14.5 Días</strong>
+                            </div>
+                            <div class="bg-gray-800/50 border border-gray-700/40 p-2.5 rounded-lg text-center">
+                                <span class="text-[10px] text-gray-400 block uppercase font-mono">Nivel Servicio</span>
+                                <strong id="card-servicio" class="text-xs text-emerald-400">98.2%</strong>
+                            </div>
+                            <div class="bg-gray-800/50 border border-gray-700/40 p-2.5 rounded-lg text-center">
+                                <span class="text-[10px] text-gray-400 block uppercase font-mono">Riesgo Quiebre</span>
+                                <strong id="card-riesgo" class="text-xs text-amber-400">Bajo</strong>
+                            </div>
+                        </div>
+                        <!-- ====================================================================== -->
                     </div>
 
                     <!-- Aprobación Transaccional y Recuadros Informativos -->
@@ -122,7 +139,7 @@
                                 <p>La emisión de esta orden congelará los valores actuales y la curva del simulador en el log transaccional.</p>
                             </div>
 
-                            <!-- ================= RECUADROS INFORMATIVOS NUEVOS ================= -->
+                            <!-- Recuadros Informativos Contextuales -->
                             <div class="space-y-2 pt-1">
                                 <div class="p-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-xs space-y-0.5">
                                     <p class="font-semibold text-amber-300">📦 ¿Qué es el Lead Time del Proveedor?</p>
@@ -139,7 +156,6 @@
                                     <p class="text-gray-300 text-[11px]">Permite pasar de una visualización pasiva a una gestión activa. Su función es evaluar escenarios hipotéticos (What-If) y validar el impacto operativo del modelo híbrido antes de comprometer capital en órdenes reales.</p>
                                 </div>
                             </div>
-                            <!-- ================================================================= -->
                         </div>
 
                         <button onclick="aprobarOrden()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-2.5 rounded-lg transition shadow-lg shadow-emerald-900/20 mt-3">
@@ -249,16 +265,16 @@
             chartSimInstance = new Chart(ctx, {
                 type: 'line',
                 data: {
-                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7 (Proyectada)'],
+                    labels: ['Sem 1', 'Sem 2', 'Sem 3', 'Sem 4', 'Sem 5', 'Sem 6', 'Sem 7 (Proj)'],
                     datasets: [
                         { label: 'Curva Proyectada (DSS)', data: basePoints, borderColor: '#fbbf24', backgroundColor: 'rgba(251, 191, 36, 0.1)', borderWidth: 2, fill: true, tension: 0.3 },
-                        { label: 'Punto de Reorden Óptimo', data: Array(7).fill(160 * (1 + ss)), borderColor: '#f43f5e', borderDash: [3, 3], borderWidth: 1.5, fill: false }
+                        { label: 'Punto Reorden', data: Array(7).fill(160 * (1 + ss)), borderColor: '#f43f5e', borderDash: [3, 3], borderWidth: 1.5, fill: false }
                     ]
                 },
                 options: { 
                     responsive: true, 
                     maintainAspectRatio: false,
-                    plugins: { legend: { labels: { color: '#9ca3af', font: { size: 10 } } } },
+                    plugins: { legend: { display: false } },
                     scales: {
                         x: { ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } },
                         y: { ticks: { color: '#9ca3af', font: { size: 9 } }, grid: { color: 'rgba(255,255,255,0.05)' } }
@@ -267,6 +283,7 @@
             });
         }
 
+        // Función reactiva que actualiza al instante datos, gráfica y las tarjetas informativas nuevas
         async function actualizarSimulacionEnVivo() {
             const lt = parseFloat(document.getElementById('leadTime').value);
             const ss = parseFloat(document.getElementById('safetyStock').value) / 100;
@@ -282,6 +299,24 @@
                 const data = await response.json();
                 
                 document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
+
+                // Actualizar tarjetas informativas dinámicas del simulador
+                const coberturaEst = (10 + (lt * 0.5) + (ss * 5)).toFixed(1);
+                const nivelServicio = (95 + (ss * 8) - (lt * 0.1)).toFixed(1);
+                document.getElementById('card-cobertura').innerText = coberturaEst + " Días";
+                document.getElementById('card-servicio').innerText = Math.min(100, nivelServicio) + "%";
+                
+                const riesgoEl = document.getElementById('card-riesgo');
+                if(lt > 20 || ss > 0.35) {
+                    riesgoEl.innerText = "Bajo";
+                    riesgoEl.className = "text-xs text-emerald-400";
+                } else if(lt > 10) {
+                    riesgoEl.innerText = "Moderado";
+                    riesgoEl.className = "text-xs text-amber-400";
+                } else {
+                    riesgoEl.innerText = "Crítico";
+                    riesgoEl.className = "text-xs text-red-400";
+                }
 
                 if(chartSimInstance) {
                     const factor = (lt / 7) * (1 + ss);
