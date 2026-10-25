@@ -71,7 +71,7 @@
                 <!-- Módulo 2 y 3: Simulación Reactiva y Órdenes -->
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 pt-2">
                     
-                    <!-- Simulador What-If Reactivo (Sin botón, automático al deslizar) -->
+                    <!-- Simulador What-If Reactivo -->
                     <div class="bg-gray-900/60 border border-gray-700/40 p-5 rounded-xl space-y-4">
                         <div class="flex justify-between items-center">
                             <h4 class="font-semibold text-amber-400 text-sm">2. Simulador de Escenarios (Ajuste Manual en Vivo)</h4>
@@ -108,7 +108,7 @@
                         </div>
                     </div>
 
-                    <!-- Aprobación Transaccional -->
+                    <!-- Aprobación Transaccional y Recuadros Informativos -->
                     <div class="bg-gray-900/60 border border-gray-700/40 p-5 rounded-xl space-y-4 flex flex-col justify-between">
                         <div class="space-y-4">
                             <h4 class="font-semibold text-emerald-400 text-sm">3. Aprobación Transaccional</h4>
@@ -116,12 +116,33 @@
                                 <label class="block text-xs text-gray-300 mb-1">Observaciones del Analista de Compras:</label>
                                 <input type="text" id="observacion" placeholder="Ej. Aprobado por campaña..." class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
                             </div>
+                            
                             <div class="p-3 bg-emerald-950/20 border border-emerald-500/20 rounded-lg text-xs text-emerald-300 space-y-1">
                                 <p class="font-semibold">💡 Nota de Auditoría:</p>
                                 <p>La emisión de esta orden congelará los valores actuales y la curva del simulador en el log transaccional.</p>
                             </div>
+
+                            <!-- ================= RECUADROS INFORMATIVOS NUEVOS ================= -->
+                            <div class="space-y-2 pt-1">
+                                <div class="p-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-xs space-y-0.5">
+                                    <p class="font-semibold text-amber-300">📦 ¿Qué es el Lead Time del Proveedor?</p>
+                                    <p class="text-gray-400 text-[11px]">Plazo en días que transcurre desde que se emite la orden de compra hasta que la mercancía ingresa físicamente al almacén.</p>
+                                </div>
+
+                                <div class="p-2.5 bg-gray-800/60 border border-gray-700/50 rounded-lg text-xs space-y-0.5">
+                                    <p class="font-semibold text-amber-300">🛡️ ¿Qué es el Stock de Seguridad Extra?</p>
+                                    <p class="text-gray-400 text-[11px]">Margen porcentual adicional de inventario para absorber variaciones imprevistas en la demanda o retrasos logísticos.</p>
+                                </div>
+
+                                <div class="p-2.5 bg-cyan-950/30 border border-cyan-500/30 rounded-lg text-xs space-y-0.5">
+                                    <p class="font-semibold text-cyan-300">🎯 Propósito y Función de este Apartado (DSS)</p>
+                                    <p class="text-gray-300 text-[11px]">Permite pasar de una visualización pasiva a una gestión activa. Su función es evaluar escenarios hipotéticos (What-If) y validar el impacto operativo del modelo híbrido antes de comprometer capital en órdenes reales.</p>
+                                </div>
+                            </div>
+                            <!-- ================================================================= -->
                         </div>
-                        <button onclick="aprobarOrden()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-2.5 rounded-lg transition shadow-lg shadow-emerald-900/20">
+
+                        <button onclick="aprobarOrden()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm py-2.5 rounded-lg transition shadow-lg shadow-emerald-900/20 mt-3">
                             ✅ Emitir Orden de Compra
                         </button>
                     </div>
@@ -246,12 +267,10 @@
             });
         }
 
-        // Función que se ejecuta AUTOMÁTICAMENTE al mover los sliders en tiempo real
         async function actualizarSimulacionEnVivo() {
             const lt = parseFloat(document.getElementById('leadTime').value);
             const ss = parseFloat(document.getElementById('safetyStock').value) / 100;
             
-            // Actualizar etiquetas visuales de los sliders de inmediato
             document.getElementById('lt-val').innerText = lt;
             document.getElementById('ss-val').innerText = Math.round(ss * 100);
 
@@ -264,13 +283,12 @@
                 
                 document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
 
-                // Actualizar la gráfica dinámicamente al vuelo
                 if(chartSimInstance) {
                     const factor = (lt / 7) * (1 + ss);
                     const nuevasUnidades = [140*factor, 155*factor, 148*factor, 165*factor, 172*factor, 180*factor, data.nuevo_pedido];
                     chartSimInstance.data.datasets[0].data = nuevasUnidades;
                     chartSimInstance.data.datasets[1].data = Array(7).fill(150 * (1 + ss));
-                    chartSimInstance.update('none'); // 'none' permite actualización ultra fluida sin parpadeos
+                    chartSimInstance.update('none');
                 }
             } catch(e) {
                 console.error(e);
