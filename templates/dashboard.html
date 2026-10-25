@@ -16,14 +16,17 @@
     <div style="display: flex; gap: 30px; flex-wrap: wrap; font-family: sans-serif;">
         
         <div style="flex: 1; min-width: 300px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333;">
-            <h5 style="color: #ffc107; margin-bottom: 20px;">2. Simulador de Escenarios (What-If)</h5>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h5 style="color: #ffc107; margin: 0;">2. Simulador de Escenarios (What-If)</h5>
+                <button onclick="location.reload()" style="background-color: transparent; color: #aaa; border: 1px solid #555; padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 0.8em;">🔄 Restaurar Datos Reales</button>
+            </div>
             <p style="margin-bottom: 10px; font-size: 0.9em;">Lead Time del Proveedor (Días): <strong id="lt-val">7</strong></p>
             <input type="range" id="leadTime" min="1" max="30" value="7" style="width: 100%; margin-bottom: 20px;" onchange="document.getElementById('lt-val').innerText = this.value">
             
             <p style="margin-bottom: 10px; font-size: 0.9em;">Stock de Seguridad Extra (%): <strong id="ss-val">15</strong></p>
             <input type="range" id="safetyStock" min="0" max="50" value="15" style="width: 100%; margin-bottom: 20px;" onchange="document.getElementById('ss-val').innerText = this.value">
             
-            <button onclick="simular()" style="background-color: #ffc107; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">Recalcular Pedido Sugerido</button>
+            <button id="btnSimular" onclick="simular()" style="background-color: #ffc107; color: #000; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%;">Recalcular Pedido Sugerido</button>
             <p style="margin-top: 20px; font-size: 1.2em; text-align: center;">Nuevo Pedido Sugerido: <strong id="resultadoPedido" style="color: #00ff00; font-size: 1.3em;">172</strong> unds.</p>
         </div>
 
@@ -35,28 +38,75 @@
         </div>
 
     </div>
+
+    <!-- Módulo 4: Historial Transaccional -->
+    <div style="margin-top: 30px; background-color: #2a2a3c; padding: 20px; border-radius: 8px; border: 1px solid #333; font-family: sans-serif;">
+        <h5 style="color: #00d2ff; margin-bottom: 15px;">4. Registro de Órdenes Emitidas (Log Transaccional)</h5>
+        <table style="width: 100%; border-collapse: collapse; color: white; text-align: left;">
+            <thead>
+                <tr style="border-bottom: 2px solid #555;">
+                    <th style="padding: 10px;">ID Orden</th>
+                    <th style="padding: 10px;">Fecha/Hora</th>
+                    <th style="padding: 10px;">Cantidad</th>
+                    <th style="padding: 10px;">Observación</th>
+                    <th style="padding: 10px;">Estado</th>
+                </tr>
+            </thead>
+            <tbody id="tablaOrdenes">
+                <!-- Las órdenes aparecerán aquí dinámicamente -->
+            </tbody>
+        </table>
+    </div>
+
 </div>
 
 <script>
     async function simular() {
+        const btn = document.getElementById('btnSimular');
+        const textoOriginal = btn.innerText;
+        btn.innerText = "⏳ Recalculando con ARIMA-LSTM...";
+        btn.disabled = true;
+
         const lt = document.getElementById('leadTime').value;
         const ss = document.getElementById('safetyStock').value / 100;
-        const response = await fetch('/api/simular', {
-            method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ lead_time: lt, safety_stock: ss })
-        });
-        const data = await response.json();
-        document.getElementById('resultadoPedido').innerText = data.nuevo_pedido;
-        alert(data.mensaje);
+        
+        setTimeout(async () => {
+            const response = await fetch('/api/simular', {
+                method: 'POST', headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ lead_time: lt, safety_stock: ss })
+            });
+            const data = await response.json();
+            
+            document.getElementById('resultadoPedido').innerText = data.nuevo_pedido;
+            btn.innerText = textoOriginal;
+            btn.disabled = false;
+        }, 800);
     }
 
     async function aprobarOrden() {
         const qty = document.getElementById('resultadoPedido').innerText;
+        const obs = document.getElementById('observacion').value || 'Sin observaciones';
+        
         const response = await fetch('/api/ordenes/crear', {
             method: 'POST', headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ qty: qty })
+            body: JSON.stringify({ qty: qty, obs: obs })
         });
         const data = await response.json();
+        
+        const tabla = document.getElementById('tablaOrdenes');
+        const fecha = new Date().toLocaleString();
+        const idOrden = 'ORD-' + Math.floor(Math.random() * 10000);
+        
+        const nuevaFila = `<tr style="border-bottom: 1px solid #444;">
+            <td style="padding: 10px; color: #ffc107;">${idOrden}</td>
+            <td style="padding: 10px;">${fecha}</td>
+            <td style="padding: 10px; font-weight: bold;">${qty} unds.</td>
+            <td style="padding: 10px;">${obs}</td>
+            <td style="padding: 10px;"><span style="background-color: #28a745; padding: 3px 8px; border-radius: 3px; font-size: 0.8em;">Enviado a Proveedor</span></td>
+        </tr>`;
+        
+        tabla.innerHTML += nuevaFila;
+        document.getElementById('observacion').value = '';
         alert(data.mensaje);
     }
 
