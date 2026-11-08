@@ -1,0 +1,138 @@
+{
+    "banner": {
+        "skus_en_riesgo": 6,
+        "total_skus": 8,
+        "mensaje": "6 de 8 productos en riesgo ALTO"
+    },
+    "recomendaciones_skus": [
+        {
+            "pronostico_semanal": 38004.2,
+            "cobertura_recomendada": 43704.83,
+            "tasa_quiebre_o2": 37.5,
+            "nivel_riesgo": "Alto",
+            "badge_color": "danger",
+            "sku": "SOS001L12P"
+        },
+        {
+            "pronostico_semanal": 33336.95,
+            "cobertura_recomendada": 38337.5,
+            "tasa_quiebre_o2": 37.5,
+            "nivel_riesgo": "Alto",
+            "badge_color": "danger",
+            "sku": "SOS005L04P"
+        },
+        {
+            "pronostico_semanal": 25743.92,
+            "cobertura_recomendada": 29605.51,
+            "tasa_quiebre_o2": 37.5,
+            "nivel_riesgo": "Alto",
+            "badge_color": "danger",
+            "sku": "SOS002L09P"
+        },
+        {
+            "pronostico_semanal": 21578.36,
+            "cobertura_recomendada": 24815.12,
+            "tasa_quiebre_o2": 50.0,
+            "nivel_riesgo": "Alto",
+            "badge_color": "danger",
+            "sku": "ATN01K24P"
+        },
+        {
+            "pronostico_semanal": 13219.44,
+            "cobertura_recomendada": 15202.36,
+            "tasa_quiebre_o2": 50.0,
+            "nivel_riesgo": "Alto",
+            "badge_color": "danger",
+            "sku": "POV001L24P"
+        },
+        {
+            "pronostico_semanal": 7140.39,
+            "cobertura_recomendada": 8211.44,
+            "tasa_quiebre_o2": 37.5,
+            "nivel_riesgo": "Alto",
+            "badge_color": "danger",
+            "sku": "POV500M24P"
+        },
+        {
+            "pronostico_semanal": 15960.82,
+            "cobertura_recomendada": 18354.95,
+            "tasa_quiebre_o2": 25.0,
+            "nivel_riesgo": "Medio",
+            "badge_color": "warning",
+            "sku": "SOS500M24P"
+        },
+        {
+            "pronostico_semanal": 5681.64,
+            "cobertura_recomendada": 6533.89,
+            "tasa_quiebre_o2": 25.0,
+            "nivel_riesgo": "Medio",
+            "badge_color": "warning",
+            "sku": "SOS003L04P"
+        }
+    ],
+    "metricas_globales": {
+        "mape": {
+            "o1": 80.11,
+            "o2": 102.0
+        },
+        "quiebre": {
+            "o1": 62.5,
+            "o2": 37.5
+        },
+        "ventas_perdidas": {
+            "o1": 19.3,
+            "o2": 14.2
+        },
+        "fill_rate": {
+            "o1": 80.7,
+            "o2": 85.8
+        },
+        "otd": {
+            "o1": 37.5,
+            "o2": 62.5
+        },
+        "tiempo_respuesta": 0.0411
+    },
+    "grafico": {
+        "fechas": [
+            "2023-06-25",
+            "2023-07-02",
+            "2023-07-09",
+            "2023-07-16",
+            "2023-07-23",
+            "2023-07-30",
+            "2023-08-06",
+            "2023-08-13"
+        ],
+        "demanda_real": [
+            236570.84097946857,
+            51334.524637681156,
+            192912.324897343,
+            164332.06872101448,
+            155794.7083152174,
+            186930.625,
+            135572.09895652175,
+            31950.705072463767
+        ],
+        "pronostico_o1": [
+            142712.55958605075,
+            142712.55958605075,
+            142712.55958605075,
+            142712.55958605075,
+            142712.55958605075,
+            142712.55958605075,
+            142712.55958605075,
+            142712.55958605075
+        ],
+        "pronostico_o2": [
+            191570.72636583727,
+            219027.20023604739,
+            102510.47405516166,
+            167508.3107276919,
+            161305.68285893867,
+            157917.3943464646,
+            173267.14752701612,
+            151665.7877084176
+        ]
+    }
+}

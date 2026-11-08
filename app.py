@@ -4,21 +4,24 @@ import logging
 import math
 import os
 import threading
-from datetime import datetime
+import time
+import uuid
+from datetime import datetime, timezone
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, g, Response
 from werkzeug.utils import secure_filename
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 RESULTADOS = os.path.join(BASE_DIR, "resultados.json")
 DATA_DIR = os.path.join(BASE_DIR, "data")
 UPLOAD_DIR = os.path.join(DATA_DIR, "uploads")
+HTTP_LOG = os.path.join(BASE_DIR, "auditoria", "peticiones_http.jsonl")
 ORDENES_LOG = os.path.join(DATA_DIR, "ordenes_simuladas.json")
 
 ESCENARIOS = {
     "estable": "escenario_estable.csv",
-    "campana": "escenario_campana.csv",
+    "campana": "escenario_campaña.csv",
     "quiebre": "escenario_quiebre.csv",
 }
 
@@ -27,6 +30,40 @@ app.config["MAX_CONTENT_LENGTH"] = 5 * 1024 * 1024  # 5 MB
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("plataforma")
 _lock = threading.Lock()
+
+
+@app.before_request
+def iniciar_medicion_http():
+    g.http_inicio = time.perf_counter()
+    g.http_inicio_utc = datetime.now(timezone.utc).isoformat()
+    g.http_id = str(uuid.uuid4())
+
+
+@app.after_request
+def finalizar_medicion_http(response):
+    # La ruta ya construyó el HTML o serializó su JSON. No incluye red/navegador
+    # ni la escritura del propio registro; tampoco consumo de respuestas streaming.
+    if not hasattr(g, 'http_inicio'):
+        return response
+    segundos = time.perf_counter() - g.http_inicio
+    registro = {'peticion_id': g.http_id, 'inicio_utc': g.http_inicio_utc,
+                'fin_utc': datetime.now(timezone.utc).isoformat(),
+                'metodo': request.method, 'ruta': request.path,
+                'estado_http': response.status_code, 'tiempo_respuesta_segundos': segundos,
+                'respuesta_streaming': response.is_streamed}
+    response.headers['X-Response-Time-Seconds'] = f'{segundos:.9f}'
+    response.headers['X-Request-ID'] = g.http_id
+    response.headers['Server-Timing'] = f'flask;dur={segundos*1000:.6f}'
+    try:
+        with _lock:
+            os.makedirs(os.path.dirname(HTTP_LOG), exist_ok=True)
+            with open(HTTP_LOG, 'a', encoding='utf-8') as archivo:
+                archivo.write(json.dumps(registro, ensure_ascii=False, allow_nan=False)+'\n')
+        response.headers['X-Audit-Recorded'] = 'true'
+    except OSError:
+        log.exception('No se pudo persistir el registro de tiempo HTTP')
+        response.headers['X-Audit-Recorded'] = 'false'
+    return response
 
 
 # --------------------------------------------------------------------------
@@ -75,6 +112,23 @@ def get_data():
     return jsonify(data)
 
 
+@app.route('/api/exportar/<ficha>')
+def exportar_ficha(ficha):
+    data, err = cargar_resultados()
+    if err:
+        return error(err, 404)
+    tablas = {'ficha3_sku': data.get('logistica_observada', {}).get('semanas_sku'),
+              'ficha3_portafolio': data.get('logistica_observada', {}).get('semanas_portafolio'),
+              'ficha2_entrenamiento': data.get('mediciones_entrenamiento')}
+    if ficha not in tablas:
+        return error('Ficha no válida.', 404)
+    if tablas[ficha] is None:
+        return error('Reejecuta el pipeline para generar las fichas.', 422)
+    contenido = '\ufeff' + pd.DataFrame(tablas[ficha]).to_csv(index=False)
+    return Response(contenido, mimetype='text/csv',
+                    headers={'Content-Disposition': f'attachment; filename="{ficha}.csv"'})
+
+
 @app.route("/api/simular", methods=["POST"])
 def simular():
     """
@@ -84,8 +138,8 @@ def simular():
 
     El pronóstico semanal por SKU se toma de resultados.json
     ("pronostico_proximo": {sku: unidades/semana}). Es una ayuda de decisión
-    ilustrativa: la validación de la tesis usa lead time = 0 y la política
-    de reposición semanal de indicadores.py.
+    ilustrativa: este pedido sugerido no modifica las entregas históricas
+    ni los indicadores observados de la ficha 3.
     """
     try:
         req = request.get_json(silent=True) or {}
@@ -98,7 +152,7 @@ def simular():
             return error("lead_time debe estar entre 1 y 90 días.")
         if not (0 <= safety_stock <= 1):
             return error("safety_stock debe estar entre 0 y 1 (por ejemplo, 0.15).")
-        if stock_actual < 0:
+        if not math.isfinite(stock_actual) or stock_actual < 0:
             return error("stock_actual no puede ser negativo.")
 
         data, err = cargar_resultados()

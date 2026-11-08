@@ -13,7 +13,7 @@
         <header class="border-b border-gray-800 pb-4 flex justify-between items-center">
             <div>
                 <h1 class="text-2xl font-bold text-white tracking-wide">Plataforma Web de Gestión de Inventarios</h1>
-                <p class="text-sm text-gray-400">Sistema Predictivo Multi-SKU (Modelo Híbrido ARIMA-LSTM) — Categoría A</p>
+                <p class="text-sm text-gray-400">Sistema Predictivo Multi-SKU (Modelo Híbrido ARIMA-LSTM) — 8 SKUs de mayor volumen en entrenamiento</p>
             </div>
             <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-semibold">● Servidor Local</span>
         </header>
@@ -28,6 +28,8 @@
             </div>
         </div>
 
+        <p id="nota-auditoria" class="text-sm text-cyan-300">Cargando procedencia y protocolo...</p>
+        <p class="text-xs text-gray-400">Benchmark histórico de SupplyGraph. O1: media móvil; O2: ARIMA–LSTM. Los indicadores logísticos se calculan con pedidos y entregas observados. OTD representa cumplimiento por volumen; no verifica puntualidad contractual. El riesgo resume el déficit histórico, no el stock actual.</p>
         <section class="space-y-4">
             <div class="flex justify-between items-center">
                 <h2 class="text-lg font-semibold text-white">Planificación de Reabastecimiento por Producto</h2>
@@ -45,6 +47,24 @@
             </div>
         </section>
 
+        <section class="border-t border-gray-800 pt-6 space-y-4">
+            <h2 class="text-lg font-semibold">Ficha 2 · Tiempo de respuesta del servidor</h2>
+            <p id="tiempo-http" class="text-cyan-300">Midiendo petición...</p>
+            <p id="id-http" class="text-xs text-gray-400"></p>
+            <p class="text-xs text-gray-400">Desde la entrada en Flask hasta construir el HTML/JSON. Incluye lectura de archivos y procesamiento de la ruta; excluye red, navegador y escritura del propio registro. El entrenamiento se mide por separado.</p>
+            <a href="/api/exportar/ficha2_entrenamiento" class="text-cyan-300 underline">Descargar mediciones de entrenamiento CSV</a>
+        </section>
+        <section class="border-t border-gray-800 pt-6 space-y-4">
+            <h2 class="text-lg font-semibold">Ficha 3 · Pedidos y entregas observados</h2>
+            <p id="periodo-logistica" class="text-sm text-gray-400"></p>
+            <p class="text-xs text-gray-400">Las cantidades son unidades físicas, no conteos de órdenes. «Entregas a tiempo» usa entregas registradas en la misma semana, sin fechas prometidas. OTD y Fill Rate pueden superar 100%. Sin pedidos, los porcentajes son N/D. No se atribuyen estas entregas a O1 u O2.</p>
+            <div id="metricas-logisticas" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+            <label class="text-sm">Detalle semanal: <select id="sku-logistica" class="bg-gray-800 p-2"><option value="PORTAFOLIO">Portafolio completo (8 SKUs)</option></select></label>
+            <p class="text-xs text-gray-400">El detalle muestra todo el histórico de semanas completas. En portafolio se suman pedidos y entregas antes de calcular el déficit; los excedentes de un SKU pueden compensar faltantes de otro dentro de esa semana.</p>
+            <div class="overflow-auto max-h-96"><table class="w-full text-xs text-right"><thead><tr><th>Semana (fin)</th><th>Pedidos totales</th><th>Entregas a tiempo*</th><th>Pedidos con quiebre*</th><th>% Quiebre</th><th>% OTD*</th><th>% Ventas perdidas*</th><th>% Fill Rate</th></tr></thead><tbody id="filas-logisticas"></tbody></table></div>
+            <div class="flex gap-4 text-sm text-cyan-300 underline"><a href="/api/exportar/ficha3_portafolio">Descargar portafolio CSV</a><a href="/api/exportar/ficha3_sku">Descargar semana/SKU CSV</a></div>
+        </section>
+
         <!-- ========================================== -->
         <!-- MÓDULOS DE SISTEMA DE SOPORTE A LA DECISIÓN (DSS EN TIEMPO REAL) -->
         <!-- ========================================== -->
@@ -52,13 +72,14 @@
             <div class="bg-gray-800/40 border border-gray-700/50 p-6 rounded-2xl space-y-6">
                 <div class="flex justify-between items-center border-b border-gray-700/50 pb-4">
                     <h3 class="text-lg font-semibold text-cyan-400 flex items-center gap-2">
-                        <span>⚙️</span> Panel de Control DSS (Simulador Reactivo en Tiempo Real)
+                        <span>⚙️</span> Simulador ilustrativo (gráficos y tarjetas de ejemplo)
                     </h3>
                     <button onclick="location.reload()" class="bg-gray-700 hover:bg-gray-600 text-gray-300 text-xs px-3 py-1.5 rounded-lg border border-gray-600 transition">
                         🔄 Restaurar Datos Reales
                     </button>
                 </div>
 
+                <label class="text-sm">SKU para calcular pedido: <select id="sku-simulacion" class="bg-gray-800" onchange="actualizarSimulacionEnVivo()"></select></label><p class="text-xs text-gray-400">El pedido usa el pronóstico histórico del SKU y supone stock actual cero. Las curvas, cobertura, servicio y riesgo de este simulador son ejemplos visuales y no métricas validadas.</p>
                 <!-- Módulo 1: Ingesta con Escenarios Predefinidos en Frontend -->
                 <div class="space-y-3">
                     <label class="block text-sm font-medium text-gray-300">1. Ingesta Dinámica de Datos (Escenarios de Prueba para Demo)</label>
@@ -201,15 +222,20 @@
 
         // Carga inicial
         fetch('/api/data')
-            .then(res => res.json())
+            .then(async res => { const data = await res.json(); if (!res.ok) throw new Error(data.error || 'No se pudo cargar resultados'); document.getElementById('tiempo-http').textContent = `${res.headers.get('X-Response-Time-Seconds')} s — GET /api/data`; document.getElementById('id-http').textContent = `Petición: ${res.headers.get('X-Request-ID')} · Registro guardado: ${res.headers.get('X-Audit-Recorded')}`; return data; })
             .then(data => {
                 document.getElementById('banner-titulo').innerText = data.banner.mensaje;
-                document.getElementById('banner-subtitulo').innerText = `Monitoreo continuo en ${data.banner.total_skus} SKUs estratégicos.`;
+                document.getElementById('banner-subtitulo').innerText = `Evaluación retrospectiva de ${data.banner.total_skus} SKUs.`;
+                const md = data.metadata;
+                document.getElementById('nota-auditoria').textContent = `${md.datos.fuente}. Prueba: ${md.datos.inicio_test} a ${md.datos.fin_test}; ${md.datos.semanas_prueba} semanas completas. Próxima semana del histórico: ${md.proxima_semana_fin}. Generado: ${md.generado_utc}.`;
+                const selector = document.getElementById('sku-simulacion');
+                Object.keys(data.pronostico_proximo).forEach(sku => { const option = document.createElement('option'); option.value = sku; option.textContent = sku; selector.appendChild(option); });
                 renderizarSKUs(data.recomendaciones_skus);
                 renderizarMetricasGlobales(data.metricas_globales);
+                renderizarLogistica(data.logistica_observada);
                 renderizarGrafico(data.grafico);
                 inicializarGraficoSimulacion(7, 0.15);
-            });
+            }).catch(err => { document.getElementById('banner-titulo').textContent = err.message; });
 
         function renderizarSKUs(skus) {
             const container = document.getElementById('grid-skus');
@@ -227,9 +253,9 @@
                             <span class="px-2 py-0.5 rounded text-xs font-semibold border ${badgeClass}">Riesgo ${item.nivel_riesgo}</span>
                         </div>
                         <div class="border-t border-gray-700/50 pt-2 space-y-1.5">
-                            <div class="flex justify-between text-xs"><span class="text-gray-400">Pronóstico Próx. Semana:</span><span class="font-semibold text-gray-200">${item.pronostico_semanal} unids.</span></div>
-                            <div class="flex justify-between text-xs bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20"><span class="text-emerald-300 font-medium">Pedido Sugerido:</span><span class="font-bold text-emerald-400">${item.cobertura_recomendada} unids.</span></div>
-                            <div class="flex justify-between text-xs text-gray-400"><span>Tasa Quiebre:</span><span class="text-amber-400">${item.tasa_quiebre_o2}%</span></div>
+                            <div class="flex justify-between text-xs"><span class="text-gray-400">Semana posterior al histórico:</span><span class="font-semibold text-gray-200">${item.pronostico_semanal} unids.</span></div>
+                            <div class="flex justify-between text-xs bg-emerald-500/10 p-1.5 rounded border border-emerald-500/20"><span class="text-emerald-300 font-medium">Cobertura objetivo (+15%):</span><span class="font-bold text-emerald-400">${item.cobertura_recomendada} unids.</span></div>
+                            <div class="flex justify-between text-xs text-gray-400"><span>Quiebre histórico (volumen):</span><span class="text-amber-400">${porcentaje(item.logistica_observada.tasa_quiebre)}</span></div>
                         </div>
                     </div>`;
             }).join('');
@@ -239,17 +265,31 @@
             const container = document.getElementById('grid-metricas-globales');
             const items = [
                 { label: 'MAPE (Error)', o1: `${m.mape.o1}%`, o2: `${m.mape.o2}%` },
-                { label: 'Tasa Quiebre', o1: `${m.quiebre.o1}%`, o2: `${m.quiebre.o2}%` },
-                { label: 'Ventas Perdidas', o1: `${m.ventas_perdidas.o1}%`, o2: `${m.ventas_perdidas.o2}%` },
-                { label: 'Fill Rate', o1: `${m.fill_rate.o1}%`, o2: `${m.fill_rate.o2}%` },
-                { label: 'OTD (Despachos)', o1: `${m.otd.o1}%`, o2: `${m.otd.o2}%` },
-                { label: 'T. Respuesta', o1: '-', o2: `${m.tiempo_respuesta}s` }
+                { label: 'MAE (unidades)', o1: m.mae.o1, o2: m.mae.o2 },
+                { label: 'WAPE', o1: `${m.wape.o1}%`, o2: `${m.wape.o2}%` },
+                { label: 'Entrenamiento neto (9 modelos)', o1: '—', o2: `${m.tiempo_entrenamiento_minutos.toFixed(4)} min` }
             ];
             container.innerHTML = items.map(i => `
                 <div class="bg-gray-800/40 border border-gray-800 p-3 rounded-lg">
                     <span class="text-xs text-gray-400 block">${i.label}</span>
-                    <div class="flex items-baseline space-x-2 mt-1"><span class="text-lg font-bold text-white">${i.o2}</span><span class="text-xs text-gray-500 line-through">${i.o1}</span></div>
+                    <div class="flex items-baseline space-x-2 mt-1"><span class="text-lg font-bold text-white">O2: ${i.o2}</span><span class="text-xs text-gray-400">O1: ${i.o1}</span></div>
                 </div>`).join('');
+        }
+
+        function porcentaje(value) { return value == null ? 'N/D' : `${value.toFixed(2)}%`; }
+        function renderizarLogistica(l) {
+            const m = l.resumen_periodo_prueba;
+            document.getElementById('periodo-logistica').textContent = `Resumen del ${l.periodo_resumen.inicio} al ${l.periodo_resumen.fin}: razones de sumas (déficits calculados semana a semana).`;
+            const items = [['Tasa de quiebre', m.tasa_quiebre], ['OTD (volumen)', m.otd], ['Ventas perdidas (déficit)', m.ventas_perdidas], ['Fill Rate', m.fill_rate]];
+            document.getElementById('metricas-logisticas').innerHTML = items.map(([label,value]) => `<div class="bg-gray-800 p-3 rounded"><span class="text-xs text-gray-400">${label}</span><p class="text-xl">${porcentaje(value)}</p></div>`).join('');
+            const selector = document.getElementById('sku-logistica');
+            Object.keys(l.resumen_por_sku_prueba).forEach(sku => { const option = document.createElement('option'); option.value = sku; option.textContent = sku; selector.appendChild(option); });
+            function mostrarFilas() {
+                const filas = selector.value === 'PORTAFOLIO' ? l.semanas_portafolio : l.semanas_sku.filter(r => r.sku === selector.value);
+                document.getElementById('filas-logisticas').innerHTML = filas.map(r => `<tr class="border-b border-gray-700"><td class="py-2">${r.semana}</td><td>${r.pedidos_totales.toFixed(2)}</td><td>${r.entregas_a_tiempo.toFixed(2)}</td><td>${r.pedidos_con_quiebre.toFixed(2)}</td><td>${porcentaje(r.tasa_quiebre)}</td><td>${porcentaje(r.otd)}</td><td>${porcentaje(r.ventas_perdidas)}</td><td>${porcentaje(r.fill_rate)}</td></tr>`).join('');
+            }
+            selector.addEventListener('change', mostrarFilas);
+            mostrarFilas();
         }
 
         function renderizarGrafico(g) {
@@ -262,7 +302,7 @@
                     datasets: [
                         { label: 'Demanda Real', data: g.demanda_real, borderColor: '#38bdf8', borderWidth: 2, fill: false },
                         { label: 'Modelo Híbrido (O2)', data: g.pronostico_o2, borderColor: '#34d399', borderWidth: 2, fill: false },
-                        { label: 'Esquema Actual (O1)', data: g.pronostico_o1, borderColor: '#f59e0b', borderDash: [4, 4], fill: false }
+                        { label: 'Media móvil 4 semanas (O1)', data: g.pronostico_o1, borderColor: '#f59e0b', borderDash: [4, 4], fill: false }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false }
@@ -363,10 +403,11 @@
             try {
                 const response = await fetch('/api/simular', {
                     method: 'POST', headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ lead_time: lt, safety_stock: ss })
+                    body: JSON.stringify({ sku: document.getElementById('sku-simulacion').value, lead_time: lt, safety_stock: ss, stock_actual: 0 })
                 });
                 const data = await response.json();
                 
+                if (!response.ok) throw new Error(data.error);
                 document.getElementById('resultadoPedido').innerText = data.nuevo_pedido + " unds.";
 
                 const coberturaEst = (10 + (lt * 0.5) + (ss * 5)).toFixed(1);
@@ -405,7 +446,7 @@
             
             const response = await fetch('/api/ordenes/crear', {
                 method: 'POST', headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ qty: qtyText, obs: obs })
+                body: JSON.stringify({ sku: document.getElementById('sku-simulacion').value, qty: parseFloat(qtyText), obs: obs })
             });
             const data = await response.json();
             

@@ -1,0 +1,11 @@
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.log
+resultados.json.tmp
+data/uploads/
+data/ordenes_simuladas.json
+
+auditoria/peticiones_http.jsonl
+auditoria/entrenamientos.jsonl
